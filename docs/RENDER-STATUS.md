@@ -36,14 +36,12 @@ Formats advertised: ARGB32, RGB24, A8, A1; the screen visual maps to RGB24
 ## Remaining before it can be the default
 
 * **Glyph/text compositing.** `AddGlyphs` parses glyph images and
-  `CompositeGlyphs8` dispatches per-glyph draws, but the **glyph-element
-  `deltax`/`deltay` semantics are not right**: cairo's request sets
-  `xSrc=65, ySrc=105` and a single element `len=28, deltax=65, deltay=105`
-  (the run's start), so advancing per glyph by `deltax` spreads the glyphs
-  65px apart instead of by the glyph advance — which means cairo is encoding
-  the position differently than a naive per-glyph `+= deltax` reading. This
-  needs to be matched against cairo's `_cairo_xlib_surface_show_glyphs` (or
-  the X server's `CompositeGlyphs`) before text is correct.
+  `CompositeGlyphs8` dispatches per-glyph draws with correct spacing (the
+  glyph's stored advance is used), and the object-lifetime fix (`mw_unregister`
+  drains pending Render requests first) lets cairo's temporary pixmaps be
+  pictured before they are freed. cairo now gets as far as creating its
+  context; the next target is a cairo-internal `_cairo_create_in_error`
+  assertion, i.e. some Render operation still reports/behaves as a failure.
 * `XRenderFindStandardFormat`'s A8 template matches; ARGB32/RGB24 still need
   the exact field values libXrender compares.
 * Operator coverage beyond `PictOpOver`/`Src`, picture transforms and conical
