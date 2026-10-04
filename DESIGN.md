@@ -165,6 +165,15 @@ clip and repeat". The shim already rasterises through cairo
 This is the largest single piece of new shim code and is tracked as
 `xlib-wayland` milestone work.
 
+**Status (implemented, gated):** `xlib-wayland` now implements the Render
+extension (`src/xlib/render.c`) — queries and the format/visual list, pictures
+and clip, `Composite`/`FillRectangles`, solid and gradient sources, glyph sets
+and `CompositeGlyphs`, transforms/filters and traps — and provides the Xlib
+output buffer and `resource_alloc` that libXrender requires. It is advertised
+only under `MW_RENDER=1` until glyph/text compositing is pixel-correct; the
+default build keeps cairo's working core-protocol fallback. See
+[`docs/RENDER-STATUS.md`](docs/RENDER-STATUS.md).
+
 ### 3.4 The supporting stack must be contemporary
 
 Building GTK+ 2.24.33 (December 2020) against a five-years-newer GLib is not
