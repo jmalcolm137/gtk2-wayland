@@ -24,7 +24,7 @@ if HOSTTOOLS="$(stage_glib_tools)" && [ -n "$HOSTTOOLS" ]; then
 fi
 
 WANT=("$@")
-[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique)
+[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte)
 
 export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$GTK2_PREFIX/bin:$PATH"
@@ -162,6 +162,28 @@ if want libunique; then
         "https://download.gnome.org/sources/libunique/1.1/libunique-$LIBUNIQUE_VERSION.tar.bz2")"
     autotools_build "libunique-$LIBUNIQUE_VERSION" "$src" \
         --disable-gtk-doc --disable-introspection --disable-maintainer-flags
+fi
+
+# ------------------------------------------------------------ gtksourceview --
+if want gtksourceview; then
+    src="$(fetch_tar "gtksourceview-$GTKSOURCEVIEW_VERSION" \
+        "https://download.gnome.org/sources/gtksourceview/2.10/gtksourceview-$GTKSOURCEVIEW_VERSION.tar.bz2")"
+    autotools_build "gtksourceview-$GTKSOURCEVIEW_VERSION" "$src" --disable-gtk-doc
+fi
+
+# -------------------------------------------------------------------- PCRE --
+if want pcre; then
+    src="$(fetch_tar "pcre-$PCRE_VERSION" \
+        "https://downloads.sourceforge.net/project/pcre/pcre/$PCRE_VERSION/pcre-$PCRE_VERSION.tar.gz")"
+    autotools_build "pcre-$PCRE_VERSION" "$src" \
+        --enable-utf --enable-unicode-properties
+fi
+
+# --------------------------------------------------------------------- VTE --
+if want vte; then
+    src="$(fetch_tar "vte-$VTE_VERSION" \
+        "https://download.gnome.org/sources/vte/0.28/vte-$VTE_VERSION.tar.xz")"
+    autotools_build "vte-$VTE_VERSION" "$src" --disable-gtk-doc
 fi
 
 step "Dependency stack ready in $GTK2_PREFIX"

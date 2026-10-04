@@ -45,7 +45,7 @@ record the revision here.
 | **M1** | GTK+ 2.24.33 configures, builds and installs against the shim, unmodified | ✅ done |
 | **M2** | a GTK2 window opens, draws and takes real input under the shim | ✅ done |
 | **M3** | GTK2's own GTest suite runs under `gtester` in nested labwc | 🚧 11/14 programs pass; the 3 failures are explained in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) |
-| **M4** | MATE 1.10 applications build unmodified and run in labwc | 🚧 foundation + caja, eom, engrampa build and render; see [docs/MATE-STATUS.md](docs/MATE-STATUS.md) |
+| **M4** | MATE 1.10 applications build unmodified and run in labwc | 🚧 caja, eom, engrampa, pluma and mate-terminal build and render; see [docs/MATE-STATUS.md](docs/MATE-STATUS.md) |
 | **M5** | GIMP 2.10 builds unmodified and runs in labwc | ⬜ |
 
 GTK2 is built **unmodified** against the Dec-2020 supporting stack it was

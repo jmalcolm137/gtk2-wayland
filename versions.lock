@@ -38,6 +38,11 @@ DCONF_VERSION=0.26.0
 LIBXKLAVIER_VERSION=5.4
 # libunique 1.0 (GTK2): caja's single-instance mechanism.
 LIBUNIQUE_VERSION=1.1.6
+# gtksourceview 2.x (GTK2): pluma's editor widget.
+GTKSOURCEVIEW_VERSION=2.10.5
+# PCRE 1.x and vte 0.28 (GTK2): mate-terminal's terminal widget.
+PCRE_VERSION=8.45
+VTE_VERSION=0.28.2
 
 # --- the compositor used for the test suite ----------------------------------
 # Distro packages are extracted into a local prefix (no root needed); see

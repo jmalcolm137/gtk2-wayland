@@ -20,6 +20,9 @@ MATE 1.10 and GIMP 2.10 — is:
 | dconf | 0.26.0 | autotools |
 | libxklavier | 5.4 | autotools |
 | libunique | 1.1.6 | autotools |
+| gtksourceview | 2.10.5 | autotools |
+| PCRE | 8.45 (1.x) | autotools |
+| vte | 0.28.2 | autotools |
 
 These are built by `scripts/build-deps.sh` into `$GTK2_PREFIX`. cairo,
 fontconfig, FreeType, HarfBuzz and fribidi stay on the host.
@@ -41,12 +44,16 @@ era build. dconf, libxklavier and libunique are the ones that surfaced.
 | engrampa | 1.10.2 | **with** its Caja extension (`libcaja-engrampa.so`) |
 | eom | 1.10.5 | image viewer |
 | caja | 1.10.4 | file manager, `libcaja-extension` |
+| pluma | 1.10.2 | text editor (needs gtksourceview 2.x) |
+| mate-terminal | 1.10.2 | terminal (needs vte 0.28 + PCRE1) |
 
 Verified running and rendering under the shim (`scripts/run-app.sh --capture`):
 
 * **caja** — full menubar, toolbar, Places sidebar and icon view (800×550).
 * **eom** — viewer menubar and zoom toolbar (540×450).
 * **engrampa** — archive-manager window (600×480).
+* **pluma** — editor with toolbar, tab and status bar (650×500).
+* **mate-terminal** — terminal running a live shell prompt (658×487).
 
 ## Shim accommodations this drove
 
@@ -77,8 +84,6 @@ These need another era library before they can build; each is the same pattern
 | Component | Needs |
 |---|---|
 | libmateweather, mate-panel, mate-applets | libsoup 2.4 (era; host is 2.74 → GLib 2.58) |
-| pluma | gtksourceview-2.0 (GTK2) |
-| mate-terminal | vte 0.28 (GTK2) |
 | marco, mate-panel, mate-applets, mate-system-monitor | libwnck (GTK2) |
 | mate-system-monitor | gtkmm 2.4 / glibmm 2.4 |
 | mate-settings-daemon, mate-media, mate-power-manager | libcanberra-gtk (GTK2) |

@@ -58,6 +58,7 @@ extra_flags() {
         eom)            printf '%s' "--disable-python";;
         engrampa)       printf '%s' "";;
         caja)           printf '%s' "--disable-packagekit --disable-update-mimedb --disable-icon-update";;
+        pluma)          printf '%s' "--disable-spell --disable-python";;
         *)              printf '%s' "";;
     esac
 }
