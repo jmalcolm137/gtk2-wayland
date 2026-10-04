@@ -19,15 +19,25 @@ GTK2_URL=https://download.gnome.org/sources/gtk+/2.24/gtk+-2.24.33.tar.xz
 # sha256 of the tarball as served by download.gnome.org
 GTK2_SHA256=ac2ac757f5942d318a311a54b0c80b5ef295f299c2a73c632f6bfb1ff49cc6da
 
-# --- the supporting stack (contemporary with GTK+ 2.24.33, Dec 2020) ---------
-# GTK2 built against a five-years-newer GLib misbehaves (e.g. GtkListStore's
-# stale-iter handling segfaults in GLib's GSequence).  We build the stack GTK2
-# was designed for into $GTK2_PREFIX so the shim is the only non-period-correct
-# variable.  These are the last patch releases of each Dec-2020 series.
-GLIB_VERSION=2.66.8
-ATK_VERSION=2.38.0
-PANGO_VERSION=1.48.11
-GDK_PIXBUF_VERSION=2.42.10
+# --- the supporting stack (MATE 1.10 era, c. 2016) ---------------------------
+# One stack must serve GTK+ 2.24.33, MATE 1.10 and GIMP 2.10.  MATE 1.10 is the
+# oldest and the most demanding: it defines compat functions (e.g. g_strv_equal)
+# that GLib added in 2.60, so a 2.60+ stack collides with it.  Pango 1.48 in
+# turn requires GLib >= 2.62.  The common denominator is the MATE-era stack
+# below; GTK2 and GIMP only set lower bounds and build against it happily.
+# (glib/atk/dconf use autotools here; pango/gdk-pixbuf use meson.)
+GLIB_VERSION=2.48.2
+ATK_VERSION=2.18.0
+PANGO_VERSION=1.38.1
+GDK_PIXBUF_VERSION=2.34.0
+# dconf is linked by GTK2-era applications for GSettings.  The host's dconf is
+# built against a much newer GLib and needs symbols GLib 2.48 does not have.
+DCONF_VERSION=0.26.0
+# libxklavier: libmatekbd and mate-settings-daemon need it.  The host's copy is
+# built against GLib 2.80 and cannot load with GLib 2.48.
+LIBXKLAVIER_VERSION=5.4
+# libunique 1.0 (GTK2): caja's single-instance mechanism.
+LIBUNIQUE_VERSION=1.1.6
 
 # --- the compositor used for the test suite ----------------------------------
 # Distro packages are extracted into a local prefix (no root needed); see

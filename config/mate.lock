@@ -1,0 +1,49 @@
+# MATE 1.10 component versions (latest patch release of each 1.10 series).
+# Source: https://pub.mate-desktop.org/releases/1.10/
+#
+# Format:  component=version
+# Read by scripts/fetch-mate.sh and scripts/build-mate.sh.
+
+MATE_SERIES=1.10
+
+mate-common=1.10.0
+mate-desktop=1.10.2
+libmatekbd=1.10.1
+libmatemixer=1.10.1
+libmateweather=1.10.0
+mate-menus=1.10.1
+mate-icon-theme=1.10.1
+mate-icon-theme-faenza=1.10.1
+mate-backgrounds=1.10.0
+
+# window manager / session / panel
+marco=1.10.3
+mate-session-manager=1.10.3
+mate-settings-daemon=1.10.3
+mate-panel=1.10.1
+mate-control-center=1.10.2
+mate-applets=1.10.4
+mate-indicator-applet=1.10.0
+mate-netbook=1.10.0
+mate-netspeed=1.10.2
+mate-notification-daemon=1.10.2
+mate-polkit=1.10.3
+mate-power-manager=1.10.2
+mate-screensaver=1.10.2
+mate-sensors-applet=1.10.4
+mate-media=1.10.1
+
+# applications
+caja=1.10.4
+caja-extensions=1.10.1
+engrampa=1.10.2
+eom=1.10.5
+atril=1.10.3
+pluma=1.10.2
+mate-terminal=1.10.2
+mate-system-monitor=1.10.1
+mate-utils=1.10.4
+mozo=1.10.1
+mate-user-guide=1.10.1
+mate-user-share=1.10.1
+python-caja=1.10.0

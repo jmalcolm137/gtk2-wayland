@@ -1,38 +1,38 @@
 #!/usr/bin/env bash
-# build-deps.sh — build the GTK2-era supporting stack into $GTK2_PREFIX.
+# build-deps.sh — build the MATE-era supporting stack into $GTK2_PREFIX.
 #
-# GTK+ 2.24.33 is from December 2020.  Built against a much newer GLib it
-# misbehaves in ways that are not the shim's fault: GtkListStore's stale-iter
-# check dereferences freed memory (a segfault in GLib's GSequence), and
-# gdk-pixbuf property defaults have moved.  This script builds the stack GTK2
-# was designed for — GLib, ATK, Pango, gdk-pixbuf — into $GTK2_PREFIX, so that
-# the only non-period-correct component in the process is our libX11 shim.
+# GTK+ 2.24.33, MATE 1.10 and GIMP 2.10 all build against the same c.2016 GNOME
+# stack; MATE 1.10 is the constraint (it defines compat functions GLib later
+# added).  This script builds GLib, ATK, Pango, gdk-pixbuf and dconf into
+# $GTK2_PREFIX so the only non-period-correct component is our libX11 shim.
 #
-# cairo/fontconfig/FreeType/HarfBuzz/fribidi are taken from the host; they are
+# cairo/fontconfig/FreeType/HarfBuzz/fribidi come from the host: they are
 # ABI-stable across the window and do not carry GLib.
 #
-# Usage: scripts/build-deps.sh [glib] [atk] [pango] [gdk-pixbuf]
-#   With no arguments, builds all four in order.
+# The stack mixes build systems: glib/atk/dconf use autotools, pango/gdk-pixbuf
+# use meson.
+#
+# Usage: scripts/build-deps.sh [glib] [atk] [pango] [gdk-pixbuf] [dconf]
+#   With no arguments, builds all five in order.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 load_versions
 
 # ---------------------------------------------------------------- host tools -
 if HOSTTOOLS="$(stage_glib_tools)" && [ -n "$HOSTTOOLS" ]; then
-    # Only needed to bootstrap if the prefix has no glib yet.
     export PATH="$HOSTTOOLS:$PATH"
 fi
 
 WANT=("$@")
-[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf)
+[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique)
 
 export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$GTK2_PREFIX/bin:$PATH"
 export CPPFLAGS="-I$GTK2_PREFIX/include ${CPPFLAGS:-}"
 export LDFLAGS="-L$GTK2_PREFIX/lib -Wl,-rpath,$GTK2_PREFIX/lib ${LDFLAGS:-}"
-# Host-compiler accommodation for code older than the compiler (same set as
-# the GTK2 build; GCC 14+ promoted several diagnostics to errors).
-: "${DEP_CFLAGS:=-O2 -g \
+# Host-compiler accommodation for code older than the compiler (GCC 14+
+# promoted several diagnostics to errors).
+: "${DEP_CFLAGS:=-O2 -g -std=gnu11 -fcommon -DG_CONST_RETURN=const \
     -Wno-error=incompatible-pointer-types \
     -Wno-error=implicit-function-declaration \
     -Wno-error=implicit-int \
@@ -40,8 +40,14 @@ export LDFLAGS="-L$GTK2_PREFIX/lib -Wl,-rpath,$GTK2_PREFIX/lib ${LDFLAGS:-}"
     -Wno-error=return-mismatch \
     -Wno-error=declaration-missing-parameter-type}"
 export CFLAGS="${DEP_CFLAGS} ${CFLAGS:-}"
+export CXXFLAGS="${DEP_CFLAGS} ${CXXFLAGS:-}"
 
 mkdir -p "$GTK2_DL" "$GTK2_CACHE/src"
+
+# Automake's old in-tree py-compile uses the `imp` module, removed in Python
+# 3.12; prefer the system py-compile when one is installed.
+SYS_PY_COMPILE=""
+for p in /usr/share/automake-*/py-compile; do [ -x "$p" ] && SYS_PY_COMPILE="$p"; done
 
 # ------------------------------------------------------------------ helpers --
 fetch_tar() { # name url
@@ -56,7 +62,7 @@ fetch_tar() { # name url
 meson_build() {
     local name="$1" src="$2"; shift 2
     local bdir="$GTK2_PREFIX/build/$name"
-    step "Building $name"
+    step "Building $name (meson)"
     rm -rf "$bdir"
     meson setup "$bdir" "$src" --prefix="$GTK2_PREFIX" --buildtype=release "$@" \
         >"$GTK2_PREFIX/$name.setup.log" 2>&1 \
@@ -68,48 +74,96 @@ meson_build() {
     log "$name installed"
 }
 
+# autotools_build name srcdir [configure args...]
+autotools_build() {
+    local name="$1" src="$2"; shift 2
+    local bdir="$GTK2_PREFIX/build/$name" cfg="$src/configure"
+    step "Building $name (autotools)"
+    rm -rf "$bdir"; mkdir -p "$bdir"; cd "$bdir"
+    if [ ! -x "$cfg" ]; then
+        ( cd "$src" && NOCONFIGURE=1 ./autogen.sh >/dev/null 2>&1 ) \
+            || ( cd "$src" && autoreconf -fi ) \
+            || die "$name: autoreconf failed"
+    fi
+    "$cfg" --prefix="$GTK2_PREFIX" --disable-static --disable-maintainer-mode "$@" \
+        >configure.log 2>&1 || { tail -35 configure.log; die "$name configure failed"; }
+    local pc=""
+    [ -n "$SYS_PY_COMPILE" ] && pc="py_compile=$SYS_PY_COMPILE"
+    # shellcheck disable=SC2086
+    make -j"$JOBS" $pc >build.log 2>&1 \
+        || { grep -nE 'error:|undefined reference|Error [0-9]' build.log | head -20; \
+             tail -12 build.log; die "$name build failed"; }
+    # shellcheck disable=SC2086
+    make install $pc >install.log 2>&1 || { tail -15 install.log; die "$name install failed"; }
+    log "$name installed"
+}
+
 want() { local w; for w in "${WANT[@]}"; do [ "$w" = "$1" ] && return 0; done; return 1; }
 
 # --------------------------------------------------------------------- GLib --
 if want glib; then
     src="$(fetch_tar "glib-$GLIB_VERSION" \
-        "https://download.gnome.org/sources/glib/2.66/glib-$GLIB_VERSION.tar.xz")"
-    meson_build "glib-$GLIB_VERSION" "$src" \
-        -Dinternal_pcre=true \
-        -Dselinux=disabled -Dlibmount=disabled -Dnls=disabled \
-        -Dman=false -Ddtrace=false -Dsystemtap=false \
-        -Dgtk_doc=false -Dinstalled_tests=false
-    export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+        "https://download.gnome.org/sources/glib/2.48/glib-$GLIB_VERSION.tar.xz")"
+    autotools_build "glib-$GLIB_VERSION" "$src" \
+        --with-pcre=internal \
+        --disable-selinux --disable-fam --disable-xattr --disable-man \
+        --disable-gtk-doc --disable-compile-warnings \
+        --disable-systemtap --disable-dtrace
 fi
 
 # ---------------------------------------------------------------------- ATK --
 if want atk; then
     src="$(fetch_tar "atk-$ATK_VERSION" \
-        "https://download.gnome.org/sources/atk/2.38/atk-$ATK_VERSION.tar.xz")"
-    meson_build "atk-$ATK_VERSION" "$src" \
-        -Dintrospection=false -Ddocs=false
+        "https://download.gnome.org/sources/atk/2.18/atk-$ATK_VERSION.tar.xz")"
+    autotools_build "atk-$ATK_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection
 fi
 
 # -------------------------------------------------------------------- Pango --
 if want pango; then
     src="$(fetch_tar "pango-$PANGO_VERSION" \
-        "https://download.gnome.org/sources/pango/1.48/pango-$PANGO_VERSION.tar.xz")"
-    meson_build "pango-$PANGO_VERSION" "$src" \
-        -Dintrospection=disabled -Dgtk_doc=false -Dinstall-tests=false \
-        -Dlibthai=disabled -Dfontconfig=enabled -Dcairo=enabled \
-        -Dxft=disabled -Dfreetype=enabled
+        "https://download.gnome.org/sources/pango/1.38/pango-$PANGO_VERSION.tar.xz")"
+    # No pangoxft: it wants the Render-backed Xft API, which the shim
+    # deliberately does not provide (see DESIGN.md).  GTK2 does not use Xft.
+    # No introspection: it would drag in gobject-introspection, which now
+    # requires a GLib far newer than this stack.
+    autotools_build "pango-$PANGO_VERSION" "$src" \
+        --without-xft --disable-introspection --disable-gtk-doc
 fi
 
 # -------------------------------------------------------------- gdk-pixbuf --
 if want gdk-pixbuf; then
     src="$(fetch_tar "gdk-pixbuf-$GDK_PIXBUF_VERSION" \
-        "https://download.gnome.org/sources/gdk-pixbuf/2.42/gdk-pixbuf-$GDK_PIXBUF_VERSION.tar.xz")"
-    meson_build "gdk-pixbuf-$GDK_PIXBUF_VERSION" "$src" \
-        -Dintrospection=disabled -Dgtk_doc=false -Ddocs=false -Dman=false \
-        -Dtests=false -Dinstalled_tests=false -Dgio_sniffing=false
+        "https://download.gnome.org/sources/gdk-pixbuf/2.34/gdk-pixbuf-$GDK_PIXBUF_VERSION.tar.xz")"
+    autotools_build "gdk-pixbuf-$GDK_PIXBUF_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection \
+        --without-libjasper --with-libjpeg --with-libtiff --with-x11
+fi
+
+# ------------------------------------------------------------------- dconf --
+if want dconf; then
+    src="$(fetch_tar "dconf-$DCONF_VERSION" \
+        "https://download.gnome.org/sources/dconf/0.26/dconf-$DCONF_VERSION.tar.xz")"
+    autotools_build "dconf-$DCONF_VERSION" "$src" \
+        --disable-gtk-doc --disable-man
+fi
+
+# --------------------------------------------------------------- libxklavier --
+if want libxklavier; then
+    src="$(fetch_tar "libxklavier-$LIBXKLAVIER_VERSION" \
+        "https://people.freedesktop.org/~svu/libxklavier-$LIBXKLAVIER_VERSION.tar.bz2")"
+    autotools_build "libxklavier-$LIBXKLAVIER_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection
+fi
+
+# ---------------------------------------------------------------- libunique --
+if want libunique; then
+    src="$(fetch_tar "libunique-$LIBUNIQUE_VERSION" \
+        "https://download.gnome.org/sources/libunique/1.1/libunique-$LIBUNIQUE_VERSION.tar.bz2")"
+    autotools_build "libunique-$LIBUNIQUE_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection --disable-maintainer-flags
 fi
 
 step "Dependency stack ready in $GTK2_PREFIX"
 PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig" pkg-config --modversion \
-    glib-2.0 atk pango gdk-pixbuf-2.0 2>/dev/null || true
-dim "gtester is now $GTK2_PREFIX/bin/gtester if the prefix's GLib provides it"
+    glib-2.0 atk pango gdk-pixbuf-2.0 dconf 2>/dev/null || true

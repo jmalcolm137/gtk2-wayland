@@ -82,6 +82,47 @@ use_prefix() {
     export LD_LIBRARY_PATH="$GTK2_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 }
 
+# stage_host_pkg — download one distro package by name and extract it into the
+# host-tools prefix ($GTK2_CACHE/hosttools).  Returns 1 on failure.
+stage_host_pkg() {
+    local name="$1" dir="$GTK2_CACHE/hosttools"
+    local pkg="$GTK2_DL/$name.pkg.tar.zst" url
+    mkdir -p "$dir" "$GTK2_DL"
+    # Reuse the cache only if it really is this package.
+    if [ -f "$pkg" ] && ! tar --zstd -xOf "$pkg" .PKGINFO 2>/dev/null \
+            | grep -q "^pkgname = $name$"; then
+        rm -f "$pkg"
+    fi
+    if [ ! -f "$pkg" ]; then
+        # `pacman -Sp` lists dependencies too; select the requested package.
+        url="$(pacman -Sp --print-format '%n %l' "$name" 2>/dev/null \
+               | awk -v n="$name" '$1==n {print $2}' | head -1)"
+        [ -n "$url" ] || return 1
+        case "$url" in
+            file://*) cp "${url#file://}" "$pkg";;
+            *) curl -fsSL -o "$pkg" "$url" || return 1;;
+        esac
+        tar --zstd -xOf "$pkg" .PKGINFO 2>/dev/null \
+            | grep -q "^pkgname = $name$" || { rm -f "$pkg"; return 1; }
+    fi
+    tar --zstd -xf "$pkg" -C "$dir" 2>/dev/null || tar -xf "$pkg" -C "$dir"
+}
+
+# stage_doc_tools — itstool (and the docbook DTD it uses) for MATE's translated
+# XML documentation.  MATE's configure scripts treat it as mandatory even when
+# we build no user guide.  Echoes the bin directory to add to PATH.
+stage_doc_tools() {
+    have itstool && return 0
+    local dir="$GTK2_CACHE/hosttools"
+    if [ ! -x "$dir/usr/bin/itstool" ]; then
+        have pacman || die "itstool missing and no pacman to stage it"
+        step "Staging itstool"
+        stage_host_pkg itstool || die "could not stage itstool"
+        stage_host_pkg docbook-xml >/dev/null 2>&1 || true
+    fi
+    printf '%s' "$dir/usr/bin"
+}
+
 # stage_glib_tools — some distributions (Arch among them) ship glib-mkenums,
 # glib-genmarshal, gtester and gtester-report in a separate `glib2-devel`
 # package rather than in glib2 itself.  GTK2's build and test harness need all
@@ -95,15 +136,7 @@ stage_glib_tools() {
     if [ ! -x "$dir/usr/bin/glib-mkenums" ]; then
         have pacman || die "glib-mkenums/gtester missing and no pacman to stage glib2-devel"
         step "Staging glib2-devel host tools (glib-mkenums, glib-genmarshal, gtester)"
-        mkdir -p "$dir" "$GTK2_DL"
-        local pkg="$GTK2_DL/glib2-devel.pkg.tar.zst" url
-        url="$(pacman -Sp --print-format '%l' glib2-devel 2>/dev/null | head -1 || true)"
-        [ -n "$url" ] || die "could not resolve the glib2-devel package"
-        case "$url" in
-            file://*) cp "${url#file://}" "$pkg";;
-            *) curl -fsSL -o "$pkg" "$url" || die "could not download glib2-devel";;
-        esac
-        tar --zstd -xf "$pkg" -C "$dir" 2>/dev/null || tar -xf "$pkg" -C "$dir"
+        stage_host_pkg glib2-devel || die "could not stage glib2-devel"
     fi
     printf '%s' "$dir/usr/bin"
 }
