@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<!-- Minimal menu for the nested labwc session; the harness does not use it. -->
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+</openbox_menu>

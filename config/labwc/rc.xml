@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!-- Nested labwc configuration for the GTK2 test harness.
+     labwc is built with -Dxwayland=disabled, so no XWayland is started and the
+     harness never touches the host X server. -->
+<labwc_config>
+  <core>
+    <primarySelection>yes</primarySelection>
+    <xwaylandPersistence>no</xwaylandPersistence>
+  </core>
+
+  <theme>
+    <name>Clearlooks</name>
+    <cornerRadius>0</cornerRadius>
+    <dropShadows>no</dropShadows>
+  </theme>
+
+  <!-- No keybindings and no autostart: the harness runs exactly one command
+       (labwc -S '<command>') and terminates when it exits. -->
+</labwc_config>

@@ -1,0 +1,23 @@
+# Build output
+/build/
+*.o
+*.lo
+*.la
+*.so
+*.so.*
+/prefix/
+
+# Downloads and unpacked sources (scripts/fetch-sources.sh)
+/dl/
+/src/
+/cache/
+
+# Test artefacts
+/tests/out/
+*.log
+*.trs
+
+# Editor noise
+*~
+.DS_Store
+compile_commands.json

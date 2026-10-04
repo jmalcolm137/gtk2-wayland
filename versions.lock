@@ -1,0 +1,42 @@
+# Pinned upstream revisions for the GTK2-on-Wayland stack.
+#
+# The shim (xlib-wayland) is a separate upstream project.  Every shim
+# accommodation for GTK2 belongs there; this file only records which revision
+# of it this tree was last tested against.
+#
+# Format:  NAME=value   (shell-sourceable)
+
+# --- the platform shim -------------------------------------------------------
+# A git ref in https://github.com/jmalcolm137/xlib-wayland
+XLIB_WAYLAND_REPO=https://github.com/jmalcolm137/xlib-wayland.git
+XLIB_WAYLAND_REF=main
+
+# --- the toolkit under test --------------------------------------------------
+# The last GTK+ 2 release published at https://download.gnome.org/sources/gtk+/
+GTK2_VERSION=2.24.33
+GTK2_TARBALL=gtk+-2.24.33.tar.xz
+GTK2_URL=https://download.gnome.org/sources/gtk+/2.24/gtk+-2.24.33.tar.xz
+# sha256 of the tarball as served by download.gnome.org
+GTK2_SHA256=ac2ac757f5942d318a311a54b0c80b5ef295f299c2a73c632f6bfb1ff49cc6da
+
+# --- the supporting stack (contemporary with GTK+ 2.24.33, Dec 2020) ---------
+# GTK2 built against a five-years-newer GLib misbehaves (e.g. GtkListStore's
+# stale-iter handling segfaults in GLib's GSequence).  We build the stack GTK2
+# was designed for into $GTK2_PREFIX so the shim is the only non-period-correct
+# variable.  These are the last patch releases of each Dec-2020 series.
+GLIB_VERSION=2.66.8
+ATK_VERSION=2.38.0
+PANGO_VERSION=1.48.11
+GDK_PIXBUF_VERSION=2.42.10
+
+# --- the compositor used for the test suite ----------------------------------
+# Distro packages are extracted into a local prefix (no root needed); see
+# scripts/setup-labwc.sh.  Versions are the Arch/EndeavourOS packages used.
+LABWC_VERSION=0.20.2
+LIBSFDO_VERSION=0.1.4
+
+# --- the test harness --------------------------------------------------------
+# GTest binaries are driven by gtester.  The prefix's GLib 2.66 ships gtester
+# and gtester-report; on hosts where GLib has removed them (after 2.60),
+# stage_glib_tools stages the distro's glib2-devel package to obtain them.
+GTESTER=prefix-or-glib2-devel
