@@ -34,6 +34,10 @@ mate-sensors-applet=1.10.4
 mate-media=1.10.1
 
 # applications
+# mate-calc was not published in the 1.10 series; 1.8.0 is the last GTK2
+# release and builds against the same era stack (see scripts/fetch-mate.sh,
+# which fetches this component from the 1.8 mirror).
+mate-calc=1.8.0
 caja=1.10.4
 caja-extensions=1.10.1
 engrampa=1.10.2

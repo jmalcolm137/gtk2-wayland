@@ -62,11 +62,31 @@ required for `XRenderFindStandardFormat`'s ARGB32/RGB24 templates too.
 
 ### Glyph runs
 
-cairo/Xft store each glyph's advance in the glyph-set entry's `xOff`/`yOff`
-(not the element `deltax`). `CompositeGlyphs` therefore places the first element
-at `xSrc` (which already includes that element's `deltax`), later elements at
-`pen + deltax`, and advances by the glyph's stored offset — including zero-size
-(space) glyphs, which have no bitmap but still advance.
+`CompositeGlyphs` is reproduced from the X server's `miGlyphs`:
+
+* the pen accumulates from the picture origin — each element adds its
+  `(deltax,deltay)`, then each glyph adds its stored advance (cairo/Xft put
+  `x_advance` in the glyph-set entry's `xOff`/`yOff`, **not** the element
+  delta). The request's `xSrc`/`ySrc` are *source* coordinates, not the
+  destination origin.
+* each glyph bitmap is placed at `pen - xGlyphInfo.x/y`: `x`/`y` are the
+  bitmap bearing, not zero. Ignoring them shifted text left ~1px and down by
+  the ascent (~10px).
+* each element's glyph data is padded to a 4-byte boundary
+  (`space = size*len; if (space&3) space += 4-(space&3)`); without this,
+  kerned multi-element runs desync. The `0xff` glyphset-change marker is
+  handled too.
+
+### Composite / pictures
+
+The cairo surface-pattern matrix maps **user space to pattern space**, so a
+source sampled at `(xs,ys)` and drawn at `(xd,yd)` needs
+`translate(xs-xd, ys-yd)`; the sign matters — inverting it pushes drawable
+sources (icons) out of their pattern.
+
+Fidelity is checked by diffing a labelled text grid rendered with `MW_RENDER=1`
+against `MW_RENDER=0` (cairo's core-protocol path): the two agree except for a
+one-pixel antialiasing row.
 
 ## Still approximate
 

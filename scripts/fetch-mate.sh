@@ -28,13 +28,22 @@ mkdir -p "$MATE_DL" "$MATE_SRC"
 
 ver_of() { sed -n "s/^$1=//p" "$MATE_LOCK" | head -1; }
 
+# A component may come from a different series than 1.10 (mate-calc has no
+# 1.10 release; 1.8.0 is its last GTK2 version).
+mirror_of() {
+    case "$1" in
+        mate-calc) printf '%s' "https://pub.mate-desktop.org/releases/1.8";;
+        *)         printf '%s' "$MATE_MIRROR";;
+    esac
+}
+
 for c in "${WANT[@]}"; do
     v="$(ver_of "$c")"
     [ -n "$v" ] || die "unknown MATE component: $c (see config/mate.lock)"
     tarball="$MATE_DL/$c-$v.tar.xz"
     if [ ! -f "$tarball" ]; then
         log "downloading $c-$v"
-        curl -fsSL -o "$tarball" "$MATE_MIRROR/$c-$v.tar.xz" \
+        curl -fsSL -o "$tarball" "$(mirror_of "$c")/$c-$v.tar.xz" \
             || die "download failed: $c-$v"
     fi
     rm -rf "$MATE_SRC/$c-$v"

@@ -41,7 +41,7 @@ MATE process must be its era build.
 
 ## Build matrix
 
-Built (26 components):
+Built (27 components):
 
 ```
 mate-common        mate-desktop      libmatekbd        libmateweather
@@ -50,7 +50,7 @@ marco              mate-panel        mate-applets      mate-session-manager
 mate-settings-daemon  mate-control-center  mate-netbook  mate-netspeed
 mate-sensors-applet   mate-media       mate-screensaver  caja
 caja-extensions    engrampa          eom               pluma
-mate-terminal      mate-utils
+mate-terminal      mate-utils        mate-calc (1.8)
 ```
 
 Verified running and rendering under the shim (`scripts/run-app.sh --capture`):
@@ -63,11 +63,14 @@ Verified running and rendering under the shim (`scripts/run-app.sh --capture`):
 | pluma | editor: toolbar, tab, status bar |
 | mate-terminal | live shell prompt |
 | mate-panel | panel strip |
+| mate-calc | 1.8.0 (last GTK2 release; no 1.10): keypad, menu, display |
 
 Every app above renders identically with Render on (the default) and with
 `MW_RENDER=0`. caja in particular used to abort in `mate_bg`'s
 `_cairo_xlib_surface_draw_image` under Render; that was the shim's direct-format
-mask encoding and is fixed (see `docs/RENDER-STATUS.md`).
+mask encoding and is fixed (see `docs/RENDER-STATUS.md`). Text layout and icon
+compositing now match cairo's core-protocol path pixel-for-pixel (glyph bearing
+placement, per-element 4-byte padding, and the surface-pattern matrix sign).
 
 ## Remaining components and their blockers
 
