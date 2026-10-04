@@ -29,6 +29,12 @@ use_prefix
 if DOCTOOLS="$(stage_doc_tools)" && [ -n "$DOCTOOLS" ]; then
     export PATH="$PATH:$DOCTOOLS"
 fi
+# mate-icon-theme needs icon-naming-utils; stage it from the host if absent.
+if ! PKG_CONFIG_PATH="$PKG_CONFIG_PATH" pkg-config --exists icon-naming-utils 2>/dev/null; then
+    stage_host_pkg icon-naming-utils >/dev/null 2>&1 || true
+fi
+export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$GTK2_CACHE/hosttools/usr/lib/pkgconfig"
+export PATH="$PATH:$GTK2_CACHE/hosttools/usr/lib/icon-naming-utils"
 # Host-compiler accommodation, as for GTK2 and the dependency stack.
 : "${MATE_CFLAGS:=-O2 -g -fcommon -include stdlib.h -include string.h -include stdint.h \
     -Wno-error=incompatible-pointer-types \
@@ -99,10 +105,23 @@ build_one() {
         $(extra_flags "$c") \
         >configure.log 2>&1 \
         || { tail -35 configure.log; die "$c: configure failed"; }
-    make -j"$JOBS" >build.log 2>&1 \
+    local pc=""
+    [ -n "${SYS_PY_COMPILE:-}" ] && pc="py_compile=$SYS_PY_COMPILE"
+    # shellcheck disable=SC2086
+    make -j"$JOBS" $pc >build.log 2>&1 \
         || { grep -nE 'error:|undefined reference|Error [0-9]' build.log | head -20; \
              tail -12 build.log; die "$c: build failed"; }
-    make install >install.log 2>&1 || { tail -15 install.log; die "$c: install failed"; }
+    # Install-time hooks run host tools (update-mime-database, gtk-update-icon-cache,
+    # glib-compile-schemas) that are built against the system GLib and break when
+    # the prefix's GLib shadows it.  Use the prefix's own tools where they exist
+    # and skip the two host-only ones.
+    # shellcheck disable=SC2086
+    make install $pc \
+        UPDATE_MIME_DATABASE=true \
+        UPDATE_DESKTOP_DATABASE=true \
+        GTK_UPDATE_ICON_CACHE="$GTK2_PREFIX/bin/gtk-update-icon-cache" \
+        GLIB_COMPILE_SCHEMAS="$GTK2_PREFIX/bin/glib-compile-schemas" \
+        >install.log 2>&1 || { tail -15 install.log; die "$c: install failed"; }
     log "$c $v installed"
 }
 

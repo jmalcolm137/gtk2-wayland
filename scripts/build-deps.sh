@@ -24,9 +24,9 @@ if HOSTTOOLS="$(stage_glib_tools)" && [ -n "$HOSTTOOLS" ]; then
 fi
 
 WANT=("$@")
-[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra)
+[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra libcroco librsvg)
 
-export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:$GTK2_PREFIX/share/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$GTK2_PREFIX/bin:$PATH"
 export CPPFLAGS="-I$GTK2_PREFIX/include ${CPPFLAGS:-}"
 export LDFLAGS="-L$GTK2_PREFIX/lib -Wl,-rpath,$GTK2_PREFIX/lib ${LDFLAGS:-}"
@@ -218,6 +218,23 @@ if want libcanberra; then
         --disable-gtk-doc --enable-gtk --disable-gtk3 \
         --disable-alsa --disable-pulse --disable-gstreamer --disable-oss \
         --disable-udev --disable-tdb --disable-lynx
+fi
+
+# ---------------------------------------------------------------- libcroco --
+if want libcroco; then
+    src="$(fetch_tar "libcroco-$LIBCROCO_VERSION" \
+        "https://download.gnome.org/sources/libcroco/0.6/libcroco-$LIBCROCO_VERSION.tar.xz")"
+    autotools_build "libcroco-$LIBCROCO_VERSION" "$src" --disable-gtk-doc
+fi
+
+# ----------------------------------------------------------------- librsvg --
+if want librsvg; then
+    src="$(fetch_tar "librsvg-$LIBRSVG_VERSION" \
+        "https://download.gnome.org/sources/librsvg/2.40/librsvg-$LIBRSVG_VERSION.tar.xz")"
+    # rsvg-private.h uses libxml2 types without including libxml/parser.h.
+    ( export CPPFLAGS="-I/usr/include/libxml2 -include libxml/parser.h $CPPFLAGS"
+      autotools_build "librsvg-$LIBRSVG_VERSION" "$src" \
+          --disable-gtk-doc --disable-introspection )
 fi
 
 step "Dependency stack ready in $GTK2_PREFIX"

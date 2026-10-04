@@ -73,12 +73,18 @@ load_versions() {
     export XLIB_WAYLAND_REPO XLIB_WAYLAND_REF GTK2_VERSION
 }
 
+# Prefer the system automake py-compile: the older in-tree copies use the `imp`
+# module, removed in Python 3.12.
+SYS_PY_COMPILE=""
+for _p in /usr/share/automake-*/py-compile; do [ -x "$_p" ] && SYS_PY_COMPILE="$_p"; done
+export SYS_PY_COMPILE
+
 # use_prefix — put the built dependency stack (glib/atk/pango/gdk-pixbuf) and
 # the shim first on the search paths, so builds and runs resolve against the
 # prefix rather than the host.
 use_prefix() {
     export PATH="$GTK2_PREFIX/bin:$PATH"
-    export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+    export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:$GTK2_PREFIX/share/pkgconfig:${PKG_CONFIG_PATH:-}"
     export LD_LIBRARY_PATH="$GTK2_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 }
 

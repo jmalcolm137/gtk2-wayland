@@ -51,6 +51,10 @@ LIBSOUP_VERSION=2.54.1
 # mate-settings-daemon, mate-media).  Host copies need a newer GLib.
 LIBGTOP_VERSION=2.40.0
 LIBCANBERRA_VERSION=0.30
+# librsvg 2.40 (needs libcroco) for mate-panel/clock: host librsvg requires
+# GLib >= 2.50.
+LIBCROCO_VERSION=0.6.13
+LIBRSVG_VERSION=2.40.20
 
 # --- the compositor used for the test suite ----------------------------------
 # Distro packages are extracted into a local prefix (no root needed); see
