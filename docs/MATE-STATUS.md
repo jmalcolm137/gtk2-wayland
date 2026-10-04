@@ -64,6 +64,11 @@ Verified running and rendering under the shim (`scripts/run-app.sh --capture`):
 | mate-terminal | live shell prompt |
 | mate-panel | panel strip |
 
+Every app above renders identically with Render on (the default) and with
+`MW_RENDER=0`. caja in particular used to abort in `mate_bg`'s
+`_cairo_xlib_surface_draw_image` under Render; that was the shim's direct-format
+mask encoding and is fixed (see `docs/RENDER-STATUS.md`).
+
 ## Remaining components and their blockers
 
 | Component | Blocker |
@@ -87,8 +92,9 @@ Verified running and rendering under the shim (`scripts/run-app.sh --capture`):
   state-changing requests are accepted and not carried.
 * **Xft**: `XftInit`, `XftInitFtLibrary`, and the Render-level glyph entry
   points, so pangoxft exists for marco. pangoxft renders through the draw-level
-  path the shim implements; the Render-level entry points are no-ops because
-  there are no Render Pictures behind this Xft.
+  path the shim implements. The shim now also provides a full Render extension
+  (`docs/RENDER-STATUS.md`), but Xft's Render-level entry points remain no-ops;
+  nothing in the GTK2/MATE stack exercises them (GTK2 draws via pangocairo).
 
 ## Host-compiler / host-tool accommodations (not source patches)
 

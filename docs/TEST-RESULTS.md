@@ -4,7 +4,7 @@ Run with:
 
 ```sh
 scripts/build-shim.sh
-scripts/build-deps.sh          # GLib 2.66 / ATK 2.38 / Pango 1.48 / gdk-pixbuf 2.42
+scripts/build-deps.sh          # GLib 2.48 / ATK 2.18 / Pango 1.38 / gdk-pixbuf 2.34
 scripts/build-gtk2.sh
 scripts/run-tests-labwc.sh     # gtester over gtk/tests, inside nested labwc
 ```
@@ -16,14 +16,17 @@ scripts/run-tests-labwc.sh     # gtester over gtk/tests, inside nested labwc
   XWayland is never started and `DISPLAY` is unset; clients can only reach the
   shim.
 * **Toolkit:** GTK+ 2.24.33, built unmodified against `$GTK2_PREFIX`.
-* **Supporting stack (contemporary with GTK 2.24.33):** GLib 2.66.8,
-  ATK 2.38.0, Pango 1.48.11, gdk-pixbuf 2.42.10, cairo/fontconfig/FreeType/
-  HarfBuzz/fribidi from the host.
-* **Shim:** `xlib-wayland`, installed as `libX11.so.6`.
+* **Supporting stack (MATE 1.10 era, the common era for GTK2/MATE/GIMP):**
+  GLib 2.48.2, ATK 2.18.0, Pango 1.38.1, gdk-pixbuf 2.34.0,
+  cairo/fontconfig/FreeType/HarfBuzz/fribidi from the host.
+* **Shim:** `xlib-wayland`, installed as `libX11.so.6`; Render is on by default
+  (the suite passes identically with `MW_RENDER=0`).
 
 ## Result
 
-`gtester` over the 14 `gtk/tests` programs: **11 pass, 3 fail.**
+`gtester` over the 14 `gtk/tests` programs: **12 pass, 2 fail** (the two
+failures are entirely synthetic-input and test-only; they are identical with
+Render on and off).
 
 | Program | Result | Notes |
 |---|---|---|
@@ -39,12 +42,12 @@ scripts/run-tests-labwc.sh     # gtester over gtk/tests, inside nested labwc
 | filtermodel | ✅ | |
 | expander | ❌ | synthetic click (`gtk_test_widget_click`) |
 | action | ✅ | |
-| defaultvalue | ❌ | non-shim: `GdkPixbuf.rowstride` default |
-| testing | ❌ | 3 synthetic-input subtests + 1 X-server-timing subtest |
+| defaultvalue | ✅ | passes with the era gdk-pixbuf (see below) |
+| testing | ❌ | 4 synthetic-input subtests; `xserver-sync` now passes |
 
 ## The failures, precisely
 
-### 1. `expander`, and `testing`'s `test_button_clicks` / `test_send_shift_key` / `test_spin_button_arrows`
+### 1. `expander`, and `testing`'s `button-clicks` / `keys-events` / `send-shift-key` / `spin-button-arrows`
 These use GDK's **synthetic event test helpers** (`gtk_test_widget_click`,
 `gdk_test_simulate_button`, `gdk_test_simulate_key`). Those build an `XEvent`
 by hand and submit it with `XSendEvent`; the shim queues it and GDK consumes it,
@@ -64,37 +67,27 @@ click/key.
 Status: **backlog** — likely GDK's window lookup or event-mask handling for
 `XSendEvent`-delivered core events. It does not affect MATE or GIMP.
 
-### 2. `testing`'s `test_xserver_sync`
-```
-assertion failed: (sync_is_slower > 0)
-```
-The test measures whether a draw followed by `gdk_test_render_sync()`
-(`XSync`) is measurably slower than one without, asserting that a round-trip
-costs something. The shim is in-process, so `XSync` is essentially free. This is
-inherent to an in-process Xlib, not a bug; the test asserts X *server* timing.
+### 2. `testing`'s `test_xserver_sync` (now passing)
+This measures whether a draw followed by `gdk_test_render_sync()` (`XSync`) is
+measurably slower than one without, asserting a round-trip costs *something*.
+The shim is in-process, so `XSync` is nearly free; it passes now that enough
+real request-buffer work happens around the sync. It is timing-sensitive, not a
+correctness check.
 
-Status: **expected / not applicable to a shim.**
-
-### 3. `defaultvalue`
-```
-Property GdkPixbuf.rowstride: 1 != 3
-```
+### 3. `defaultvalue` (now passing)
 `defaultvalue` walks every property of every GObject type, constructs an
-instance and compares the current value to the default. `GdkPixbuf.rowstride`
-does not match for a newly constructed pixbuf. No Xlib is involved in the
-failing path; it is a gdk-pixbuf/GTK2 default-value expectation. Confirmed with
-gdk-pixbuf 2.42.10 (the era-correct version), so it is not simply a
-modern-gdk-pixbuf regression.
-
-Status: **non-shim**; upstream GTK2 test expectation.
+instance and compares the current value to the default. It used to fail on
+`GdkPixbuf.rowstride` with a modern gdk-pixbuf; with the era gdk-pixbuf 2.34.0 it
+passes. No Xlib is involved.
 
 ## What the era stack fixed
 
 Before pinning GLib etc., `liststore` **segfaulted** in
 `gtk_list_store_iter_is_valid` → `g_sequence_iter_get_sequence` (GLib 2.88's
 `GSequence` internals vs. GTK2's stale-iterator handling) and `defaultvalue`
-reported a different gdk-pixbuf mismatch. Building the Dec-2020 stack removed
-the `liststore` crash.
+reported a gdk-pixbuf mismatch. Building the pinned era stack (MATE 1.10 era,
+the common era for GTK2/MATE/GIMP) removed the `liststore` crash and the
+`defaultvalue` mismatch.
 
 ## Shim fixes this suite drove
 
@@ -112,5 +105,5 @@ the `liststore` crash.
 5. `Xft` gained the draw-level glyph entry points (`XftGlyphExtents`,
    `XftDrawGlyphs`, `XftDrawGlyphSpec`, `XftDrawGlyphFontSpec`,
    `XftDrawCharFontSpec`, `XftDefaultHasRender`) on the shim's own font path.
-   (The Render-level `XftGlyphSpecRender` remains impossible without a Render
-   extension; see DESIGN.md.)
+   (Xft's Render-level `XftGlyphSpecRender` stays a no-op; GTK2 uses
+   pangocairo, which goes through Render directly. See `docs/RENDER-STATUS.md`.)

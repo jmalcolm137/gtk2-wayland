@@ -276,8 +276,8 @@ changes they produced:
 | link: undefined `XkbGetState`, `XkbGetControls`, `XkbSelectEvents`, `XkbSelectEventDetails`, `XkbSetDetectableAutoRepeat`, `XkbFreeKeyboard` | XKB surface incomplete | added |
 | first key event → SIGSEGV in `gdkkeys-x11.c` `XkbKeyNumGroups` | `XkbGetMap` returned a descriptor with NULL `map`/`server`/`names` | `XkbGetMap` now builds a real map from the xkbcommon keymap |
 | keyval search aborts: `assertion failed (XkbKeySymEntry …)` | per-key arrays sized to the keymap max, but clients iterate to `XDisplayKeycodes()` max | size key arrays to the full 0..255 range |
-| `pangoxft` link: undefined `XftGlyphExtents`, `XftDefaultHasRender`, `XftGlyphSpecRender`, `XftDrawGlyphSpec` | Xft subset | draw-level entry points implemented; Render-level ones require a Render extension (Pango's Xft backend disabled — GTK2 does not use it) |
-| `liststore` segfault in GLib `GSequence` | GTK2 2.24 built against GLib 2.88 | build the Dec-2020 stack (GLib 2.66.8, ATK 2.38.0, Pango 1.48.11, gdk-pixbuf 2.42.10) |
+| `pangoxft` link: undefined `XftGlyphExtents`, `XftDefaultHasRender`, `XftGlyphSpecRender`, `XftDrawGlyphSpec` | Xft subset | draw-level entry points implemented; Render-level ones are no-ops. GTK2 does not use pangoxft (it draws via pangocairo/Render), so this is inert. See `docs/RENDER-STATUS.md` |
+| `liststore` segfault in GLib `GSequence` | GTK2 2.24 built against GLib 2.88 | build the pinned MATE 1.10-era stack (GLib 2.48.2, ATK 2.18.0, Pango 1.38.1, gdk-pixbuf 2.34.0) |
 
 Remaining (documented in `gtk2-wayland/docs/TEST-RESULTS.md`): GDK's synthetic
 `XSendEvent` test helpers are not dispatched to widgets; `testing`'s

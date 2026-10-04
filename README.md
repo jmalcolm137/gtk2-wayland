@@ -44,15 +44,20 @@ record the revision here.
 | **M0** | repo, docs, version pinning, nested-labwc test harness | ✅ done |
 | **M1** | GTK+ 2.24.33 configures, builds and installs against the shim, unmodified | ✅ done |
 | **M2** | a GTK2 window opens, draws and takes real input under the shim | ✅ done |
-| **M3** | GTK2's own GTest suite runs under `gtester` in nested labwc | 🚧 11/14 programs pass; the 3 failures are explained in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) |
-| **M4** | MATE 1.10 applications build unmodified and run in labwc | 🚧 caja, eom, engrampa, pluma and mate-terminal build and render; see [docs/MATE-STATUS.md](docs/MATE-STATUS.md) |
+| **M3** | GTK2's own GTest suite runs under `gtester` in nested labwc | 🚧 12/14 programs pass; the 2 failures are the synthetic-input tests, explained in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) |
+| **M4** | MATE 1.10 applications build unmodified and run in labwc | 🚧 caja, eom, engrampa, pluma, mate-terminal and the wider set build and render; see [docs/MATE-STATUS.md](docs/MATE-STATUS.md) |
 | **M5** | GIMP 2.10 builds unmodified and runs in labwc | ⬜ |
 
-GTK2 is built **unmodified** against the Dec-2020 supporting stack it was
-designed for (GLib 2.66, ATK 2.38, Pango 1.48, gdk-pixbuf 2.42) so that the
-only non-period-correct component in the process is our `libX11` shim. The
-shim's own status (libXt, Open Motif, XV and NEdit running unmodified) is
-recorded in [`xlib-wayland/README.md`](https://github.com/jmalcolm137/xlib-wayland).
+The shim now provides the full **Render** extension and it is on by default
+(text renders pixel-correctly); `MW_RENDER=0` selects cairo's core-protocol
+fallback. See [docs/RENDER-STATUS.md](docs/RENDER-STATUS.md).
+
+GTK2 is built **unmodified** against the MATE 1.10-era supporting stack (GLib
+2.48, ATK 2.18, Pango 1.38, gdk-pixbuf 2.34), the common era for GTK2, MATE 1.10
+and GIMP 2.10, so that the only non-period-correct component in the process is
+our `libX11` shim. The shim's own status (libXt, Open Motif, XV and NEdit
+running unmodified) is recorded in
+[`xlib-wayland/README.md`](https://github.com/jmalcolm137/xlib-wayland).
 
 ## Quick start
 
@@ -63,7 +68,7 @@ scripts/fetch-sources.sh
 # 1. build & install the shim (xlib-wayland) into the prefix
 scripts/build-shim.sh
 
-# 2. build the GTK 2.24.33-era supporting stack (GLib 2.66, ATK, Pango,
+# 2. build the MATE 1.10-era supporting stack (GLib 2.48, ATK, Pango,
 #    gdk-pixbuf) into the prefix, so GTK2 sees period-correct libraries
 scripts/build-deps.sh
 

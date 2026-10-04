@@ -165,28 +165,37 @@ clip and repeat". The shim already rasterises through cairo
 This is the largest single piece of new shim code and is tracked as
 `xlib-wayland` milestone work.
 
-**Status (implemented, gated):** `xlib-wayland` now implements the Render
+**Status (implemented, default-on):** `xlib-wayland` implements the Render
 extension (`src/xlib/render.c`) — queries and the format/visual list, pictures
 and clip, `Composite`/`FillRectangles`, solid and gradient sources, glyph sets
 and `CompositeGlyphs`, transforms/filters and traps — and provides the Xlib
-output buffer and `resource_alloc` that libXrender requires. It is advertised
-only under `MW_RENDER=1` until glyph/text compositing is pixel-correct; the
-default build keeps cairo's working core-protocol fallback. See
+output buffer and `resource_alloc` that libXrender requires. Getting the
+direct-format encoding and glyph-run advance semantics right (plus dispatching
+buffered requests before a drawable is freed or core-drawn) made text render
+pixel-correctly, so Render is advertised by default; `MW_RENDER=0` opts back into
+cairo's core-protocol fallback. See
 [`docs/RENDER-STATUS.md`](docs/RENDER-STATUS.md).
 
-### 3.4 The supporting stack must be contemporary
+### 3.4 The supporting stack must be a single, common era
 
-Building GTK+ 2.24.33 (December 2020) against a five-years-newer GLib is not
+Building GTK+ 2.24.33 (December 2020) against a much newer host GLib is not
 neutral. It caused a real segfault: `gtk_list_store_iter_is_valid` hands a
 stale iterator to GLib's `GSequence`, and with GLib 2.88 the freed memory is
 dereferenced rather than benignly rejected. gdk-pixbuf property defaults drift
-too.
+too. The host's GLib is simply too new.
 
-`scripts/build-deps.sh` therefore builds the stack GTK2 was designed against —
-**GLib 2.66.8, ATK 2.38.0, Pango 1.48.11, gdk-pixbuf 2.42.10** — into
-`$GTK2_PREFIX`. cairo, fontconfig, FreeType, HarfBuzz and fribidi come from the
-host: they are ABI-stable across the window and do not carry GLib, so the
-process ends up with a single GLib. With this pinned, `liststore` passes.
+One stack has to serve GTK+ 2.24.33, MATE 1.10 and GIMP 2.10, and MATE 1.10 is
+the most demanding constraint: it defines compatibility functions (e.g.
+`g_strv_equal`) that GLib only *declared* from 2.60, so a 2.60+ stack collides
+with it. Pango 1.48 in turn requires GLib ≥ 2.62. The common denominator is the
+**MATE 1.10-era stack** (c. 2016):
+
+`scripts/build-deps.sh` builds **GLib 2.48.2, ATK 2.18.0, Pango 1.38.1 (with
+Xft), gdk-pixbuf 2.34.0** — into `$GTK2_PREFIX`. GTK2 and GIMP only set lower
+bounds and build against it happily. cairo, fontconfig, FreeType, HarfBuzz and
+fribidi come from the host: they are ABI-stable across the window and do not
+carry GLib, so the process ends up with a single GLib. With this pinned,
+`liststore` passes.
 
 The compositor is the one process that must *not* use the prefix: labwc is
 built against the host GLib and would break if the prefix's GLib shadowed it.
