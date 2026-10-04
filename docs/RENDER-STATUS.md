@@ -35,15 +35,19 @@ Formats advertised: ARGB32, RGB24, A8, A1; the screen visual maps to RGB24
 
 ## Remaining before it can be the default
 
-* **Glyph/text compositing.** `AddGlyphs`/`CompositeGlyphs` parse and store glyph
-  masks, but the per-glyph placement and mask/colour interaction are not yet
-  pixel-correct, so text disappears on the Render path. This is the main gap.
-* `XRenderFindStandardFormat`'s templates do not all match the advertised
-  formats yet (A8 matches; ARGB32/RGB24 matching needs the exact template
-  fields from libXrender's table).
-* Operator coverage beyond the common `PictOpOver`/`Src`, and picture
-  transforms, are approximate.
-* Conical gradients are approximated.
+* **Glyph/text compositing.** `AddGlyphs` parses glyph images and
+  `CompositeGlyphs8` dispatches per-glyph draws, but the **glyph-element
+  `deltax`/`deltay` semantics are not right**: cairo's request sets
+  `xSrc=65, ySrc=105` and a single element `len=28, deltax=65, deltay=105`
+  (the run's start), so advancing per glyph by `deltax` spreads the glyphs
+  65px apart instead of by the glyph advance — which means cairo is encoding
+  the position differently than a naive per-glyph `+= deltax` reading. This
+  needs to be matched against cairo's `_cairo_xlib_surface_show_glyphs` (or
+  the X server's `CompositeGlyphs`) before text is correct.
+* `XRenderFindStandardFormat`'s A8 template matches; ARGB32/RGB24 still need
+  the exact field values libXrender compares.
+* Operator coverage beyond `PictOpOver`/`Src`, picture transforms and conical
+  gradients are approximate.
 
 Once glyphs render, flip the `MW_RENDER` gate to default-on: that removes the
 last reason `libpangoxft`'s Render-level entry points are no-ops, and lets
