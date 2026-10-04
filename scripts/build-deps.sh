@@ -24,7 +24,7 @@ if HOSTTOOLS="$(stage_glib_tools)" && [ -n "$HOSTTOOLS" ]; then
 fi
 
 WANT=("$@")
-[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte)
+[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra)
 
 export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$GTK2_PREFIX/bin:$PATH"
@@ -32,7 +32,8 @@ export CPPFLAGS="-I$GTK2_PREFIX/include ${CPPFLAGS:-}"
 export LDFLAGS="-L$GTK2_PREFIX/lib -Wl,-rpath,$GTK2_PREFIX/lib ${LDFLAGS:-}"
 # Host-compiler accommodation for code older than the compiler (GCC 14+
 # promoted several diagnostics to errors).
-: "${DEP_CFLAGS:=-O2 -g -std=gnu11 -fcommon -DG_CONST_RETURN=const \
+: "${DEP_CFLAGS:=-O2 -g -std=gnu11 -fcommon -D_GNU_SOURCE -DG_CONST_RETURN=const \
+    -include stdlib.h -include stdint.h \
     -Wno-error=incompatible-pointer-types \
     -Wno-error=implicit-function-declaration \
     -Wno-error=implicit-int \
@@ -123,12 +124,11 @@ fi
 if want pango; then
     src="$(fetch_tar "pango-$PANGO_VERSION" \
         "https://download.gnome.org/sources/pango/1.38/pango-$PANGO_VERSION.tar.xz")"
-    # No pangoxft: it wants the Render-backed Xft API, which the shim
-    # deliberately does not provide (see DESIGN.md).  GTK2 does not use Xft.
-    # No introspection: it would drag in gobject-introspection, which now
-    # requires a GLib far newer than this stack.
+    # With Xft: pangoxft is required by marco (and drawn through the
+    # draw-level Xft API, which the shim implements).  Its Render-level entry
+    # points are provided as no-ops; see xlib-wayland src/xft/xft.c.
     autotools_build "pango-$PANGO_VERSION" "$src" \
-        --without-xft --disable-introspection --disable-gtk-doc
+        --with-xft --disable-introspection --disable-gtk-doc
 fi
 
 # -------------------------------------------------------------- gdk-pixbuf --
@@ -184,6 +184,40 @@ if want vte; then
     src="$(fetch_tar "vte-$VTE_VERSION" \
         "https://download.gnome.org/sources/vte/0.28/vte-$VTE_VERSION.tar.xz")"
     autotools_build "vte-$VTE_VERSION" "$src" --disable-gtk-doc
+fi
+
+# ------------------------------------------------------------------ libwnck --
+if want libwnck; then
+    src="$(fetch_tar "libwnck-$LIBWNCK_VERSION" \
+        "https://download.gnome.org/sources/libwnck/2.30/libwnck-$LIBWNCK_VERSION.tar.xz")"
+    autotools_build "libwnck-$LIBWNCK_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection
+fi
+
+# ------------------------------------------------------------------ libsoup --
+if want libsoup; then
+    src="$(fetch_tar "libsoup-$LIBSOUP_VERSION" \
+        "https://download.gnome.org/sources/libsoup/2.54/libsoup-$LIBSOUP_VERSION.tar.xz")"
+    autotools_build "libsoup-$LIBSOUP_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection --disable-tls-check
+fi
+
+# ------------------------------------------------------------------ libgtop --
+if want libgtop; then
+    src="$(fetch_tar "libgtop-$LIBGTOP_VERSION" \
+        "https://download.gnome.org/sources/libgtop/2.40/libgtop-$LIBGTOP_VERSION.tar.xz")"
+    autotools_build "libgtop-$LIBGTOP_VERSION" "$src" \
+        --disable-gtk-doc --disable-introspection
+fi
+
+# --------------------------------------------------------------- libcanberra --
+if want libcanberra; then
+    src="$(fetch_tar "libcanberra-$LIBCANBERRA_VERSION" \
+        "https://0pointer.de/lennart/projects/libcanberra/libcanberra-$LIBCANBERRA_VERSION.tar.xz")"
+    autotools_build "libcanberra-$LIBCANBERRA_VERSION" "$src" \
+        --disable-gtk-doc --enable-gtk --disable-gtk3 \
+        --disable-alsa --disable-pulse --disable-gstreamer --disable-oss \
+        --disable-udev --disable-tdb --disable-lynx
 fi
 
 step "Dependency stack ready in $GTK2_PREFIX"

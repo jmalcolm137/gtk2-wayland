@@ -43,6 +43,14 @@ GTKSOURCEVIEW_VERSION=2.10.5
 # PCRE 1.x and vte 0.28 (GTK2): mate-terminal's terminal widget.
 PCRE_VERSION=8.45
 VTE_VERSION=0.28.2
+# libwnck 2.30 (GTK2): marco, mate-panel, mate-applets; libsoup 2.54 for
+# libmateweather (host libsoup 2.74 requires GLib >= 2.58).
+LIBWNCK_VERSION=2.30.7
+LIBSOUP_VERSION=2.54.1
+# libgtop (marco, mate-system-monitor) and libcanberra-gtk (marco,
+# mate-settings-daemon, mate-media).  Host copies need a newer GLib.
+LIBGTOP_VERSION=2.40.0
+LIBCANBERRA_VERSION=0.30
 
 # --- the compositor used for the test suite ----------------------------------
 # Distro packages are extracted into a local prefix (no root needed); see
