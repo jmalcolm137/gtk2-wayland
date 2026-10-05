@@ -88,6 +88,17 @@ Fidelity is checked by diffing a labelled text grid rendered with `MW_RENDER=1`
 against `MW_RENDER=0` (cairo's core-protocol path): the two agree except for a
 one-pixel antialiasing row.
 
+### Core GC clips interact with Render
+
+cairo's core-Xlib path (used by Render-level glyph/tile scratch work) sets a GC
+clip with `XSetClipRectangles` and clears it with `XSetClipMask(gc, None)`. A
+mask replaces the rectangle clip, so `XSetClipMask` must drop the stored
+rectangle clip as well — like the Render code does for `CPClipMask`. Leaving it
+in place applied the previous tile's box to the following `XCopyArea`, silently
+dropping it; the GIMP ruler's blitted scratch then carried a stale box over the
+ticks, so a trail of ticks vanished behind the moving marker near the top-left
+corner (`xlib-wayland` commit `46eceb7`).
+
 ## Still approximate
 
 * Operator coverage beyond `PictOpOver`/`Src`, picture transforms and conical
