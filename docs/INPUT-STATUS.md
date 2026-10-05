@@ -39,8 +39,13 @@ straight to `xdg_toplevel_set_fullscreen`/`unset_fullscreen` — the compositor
 does the real work — and the shim drops/restores its client-side titlebar,
 resizes to the screen or back to the saved size, and mirrors the state into the
 window's `_NET_WM_STATE` property so GDK (`gdk_window_get_state`) and the
-application can read it. Other states (maximize, above, sticky, …) are
-accepted and ignored rather than left half-applied. Commit: `fd859db`.
+application can read it. **Maximize** works the same way
+(`xdg_toplevel_set_maximized`/`unset_maximized`); xdg-shell has only a full
+maximize and GDK sends both `MAXIMIZED_VERT`/`HORZ`, so either atom maximises.
+The states the compositor reports in `xdg_toplevel.configure` drive the same
+tracking, so a maximize from the window chrome keeps the X property in sync
+too. The remaining states (above, sticky, …) are accepted and ignored rather
+than left half-applied. Commits: `fd859db`, `9e09b04`.
 
 ## Grabs
 
