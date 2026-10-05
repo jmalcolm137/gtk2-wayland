@@ -50,6 +50,11 @@ The shim provides the full **Render** extension, on by default (text renders
 pixel-correctly); `MW_RENDER=0` selects cairo's core-protocol fallback. GTK2
 gtester is 14/14 and gtk-demo matches the core fallback with Render on.
 
+GTK2's input method works as well: with `GTK_IM_MODULE=xim`, `im-xim` drives the
+shim's XIM, which is a real bridge to the compositor's `zwp_text_input_v3`.
+`scripts/test-ime.sh` commits text into a real `GtkEntry` through that path
+(using the headless compositor's scripted input method).
+
 Notable shim work landed along the way, each with its own note:
 
 * the Render path's ruler-tick clip bug — [docs/RENDER-STATUS.md](docs/RENDER-STATUS.md)

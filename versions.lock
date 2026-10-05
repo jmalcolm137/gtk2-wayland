@@ -10,6 +10,9 @@
 # A git ref in https://github.com/jmalcolm137/xlib-wayland
 XLIB_WAYLAND_REPO=https://github.com/jmalcolm137/xlib-wayland.git
 XLIB_WAYLAND_REF=main
+# Tested at cec9604: the shim's XIM is a real bridge to the compositor's
+# zwp_text_input_v3, so GTK2's im-xim (GTK_IM_MODULE=xim) composes through
+# Wayland.  Exercised by scripts/test-ime.sh.
 
 # --- the toolkit under test --------------------------------------------------
 # The last GTK+ 2 release published at https://download.gnome.org/sources/gtk+/
