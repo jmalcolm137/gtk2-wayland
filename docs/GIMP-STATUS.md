@@ -82,9 +82,16 @@ not shim changes.  Each is documented where it is applied in
 * It runs in nested labwc and directly against the host Wayland compositor
   (the shim speaking xdg-shell/decoration to the real compositor), renders its
   UI, and was exercised interactively.
-* GIMP's startup warnings are understood: `bogus monitor resolution ... using
-  96 dpi` (the shim does not report a real DPI) and `gdk_window_set_icon_list:
-  icons too large` are cosmetic.
+* GIMP's monitor resolution is real.  GDK derives it from XRandR
+  (`dpi = pixels*25.4/mm`); the shim now owns `libXrandr.so.2` and reports the
+  physical size from `wl_output.geometry`, so on the host GIMP sees the true
+  panel DPI (~102.5 on the test machine) and in nested labwc -- whose virtual
+  output advertises no physical size -- a sane 96.  `wl_output.scale` is
+  honoured too: the screen is sized in logical pixels and the reported DPI is
+  the physical DPI over the scale, which is what a non-scaled GTK2 client
+  should lay out for.
+* The remaining startup warning, `gdk_window_set_icon_list: icons too large`,
+  is cosmetic.
 
 ## Not yet looked at
 

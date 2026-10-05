@@ -188,3 +188,26 @@ stage_glib_tools() {
     fi
     printf '%s' "$dir/usr/bin"
 }
+
+# stage_era_mkenums — MATE 1.10's enum-type sources were generated with the
+# Perl glib-mkenums of its era, which processes the header list in the order
+# given.  GLib 2.56's Python rewrite sorts its inputs, so a header that relies
+# on an earlier one being included first (mate-utils' gdict-client-context.h
+# needs GdictContext from gdict-context.h) is emitted out of order and the
+# generated gdict-enum-types.c does not compile.  Extract the era tool from
+# the pinned GLib 2.48 tarball and echo its directory.
+stage_era_mkenums() {
+    local dir="$GTK2_CACHE/hosttools/era-glib-tools"
+    if [ ! -x "$dir/glib-mkenums" ]; then
+        local tar="$GTK2_DL/glib-2.48.2"
+        mkdir -p "$dir" "$GTK2_DL"
+        [ -f "$tar" ] || curl -fsSL -o "$tar" \
+            "https://download.gnome.org/sources/glib/2.48/glib-2.48.2.tar.xz" \
+            || return 1
+        tar xOf "$tar" glib-2.48.2/gobject/glib-mkenums.in 2>/dev/null \
+            | sed -e "s|@PERL_PATH@|$(command -v perl)|" \
+                  -e 's|@GLIB_VERSION@|2.48.2|' > "$dir/glib-mkenums" || return 1
+        chmod +x "$dir/glib-mkenums"
+    fi
+    printf '%s' "$dir"
+}

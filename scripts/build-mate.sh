@@ -22,6 +22,13 @@ MATE_SRC="$GTK2_CACHE/src/mate"
 [ -x "$GTK2_PREFIX/bin/gtester" ] || warn "prefix GLib not found; run scripts/build-deps.sh first"
 
 use_prefix
+# MATE 1.10 predates GLib 2.56's Python glib-mkenums (which sorts its inputs);
+# its enum-type headers rely on the command-line order, so prefer the era Perl
+# tool for the generated *-enum-types.c files.
+if ERATOOLS="$(stage_era_mkenums)"; then
+    export PATH="$ERATOOLS:$PATH"
+    export GLIB_MKENUMS="$ERATOOLS/glib-mkenums"
+fi
 # MATE's configure scripts require itstool even when no user guide is built.
 # Append the host-tools dir so it is found, but keep the prefix's glib tools
 # (gdbus-codegen, glib-mkenums, glib-genmarshal) first -- a newer codegen would
