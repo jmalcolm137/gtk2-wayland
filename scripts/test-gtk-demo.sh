@@ -73,11 +73,13 @@ mapfile -t TITLES < <("$WALKER" --list 2>/dev/null)
 N=${#TITLES[@]}
 step "gtk-demo: $N demos, render vs fallback"
 
-# Two fallback frames at different times (to detect animation), one render.
-# The different --timeout values give animation a chance to be at a different
-# phase, which the same-time pair could not.
+# Two frames on each path at different times.  A demo is animated if either
+# path changes between its own two frames; the render/fallback pair is then not
+# comparable and the demo is reported as skipped rather than failed.
 args=()
-for i in $(seq 0 $((N-1))); do args+=("$i" rn 3 "$i" fb1 3 "$i" fb2 6); done
+for i in $(seq 0 $((N-1))); do
+    args+=("$i" rn1 3 "$i" rn2 4 "$i" fb1 3 "$i" fb2 4)
+done
 printf '%s\n' "${args[@]}" | xargs -P "$JOBS" -n 3 bash -c 'run_one "$0" "$1" "$2"'
 
 # ------------------------------------------------- gtk-demo browser itself --
@@ -122,15 +124,17 @@ def diffpct(a, b):
 fails = []
 print(f"{'#':>2}  {'result':<26} demo")
 for i in range(N):
-    rn = load(f"{out}/d{i}-rn.png")
+    rn = load(f"{out}/d{i}-rn1.png")
+    rn2 = load(f"{out}/d{i}-rn2.png")
     f1 = load(f"{out}/d{i}-fb1.png")
     f2 = load(f"{out}/d{i}-fb2.png")
     title = titles[i] if i < len(titles) else "?"
-    anim = diffpct(f1, f2)
+    cands = [x for x in (diffpct(rn, rn2), diffpct(f1, f2)) if x is not None]
+    anim = max(cands) if cands else None
     if rn is None or f1 is None:
         status = "NO FRAME"; fails.append((i, title, status))
     elif anim is not None and anim > 1.5:
-        status = f"animated (skip, fb {anim:.1f}%)"
+        status = f"animated (skip, {anim:.1f}%)"
     else:
         d = diffpct(rn, f1)
         # blank-on-render while fallback has content is always a failure

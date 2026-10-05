@@ -36,6 +36,8 @@ matches.
   pushing drawable sources out of their pattern.
 * **Text spacing/position** (everywhere): glyph bitmap bearing and per-element
   padding were not applied.
+* **Every gradient's colours were garbage**: Create*Gradient stops are sent as
+  all positions then all colours, which we read interleaved.
 
 ## Running it
 
