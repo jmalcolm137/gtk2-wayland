@@ -30,6 +30,18 @@ leaving for its submenu, otherwise reports the leave at a bogus position.
 
 Commit: `xlib-wayland` `d139912`.
 
+## Window-manager messages (EWMH)
+
+The shim is also the window manager for its X clients. A client asking to
+change a window state sends an EWMH `_NET_WM_STATE` ClientMessage to the root
+window; `XSendEvent` consumes it and applies it. **Fullscreen** is translated
+straight to `xdg_toplevel_set_fullscreen`/`unset_fullscreen` — the compositor
+does the real work — and the shim drops/restores its client-side titlebar,
+resizes to the screen or back to the saved size, and mirrors the state into the
+window's `_NET_WM_STATE` property so GDK (`gdk_window_get_state`) and the
+application can read it. Other states (maximize, above, sticky, …) are
+accepted and ignored rather than left half-applied. Commit: `fd859db`.
+
 ## Grabs
 
 `XGrabPointer`/`XUngrabPointer` are modelled faithfully, including the
