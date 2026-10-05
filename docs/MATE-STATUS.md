@@ -5,16 +5,17 @@ unmodified against the `xlib-wayland` shim and run them in nested labwc.
 
 ## The era-correct supporting stack
 
-MATE 1.10 constrains the whole stack. It is older than GTK+ 2.24.33 and defines
-compatibility functions GLib added later (`libmatekbd` defines its own
-`g_strv_equal`, which GLib 2.60 declares), so a 2.60+ GLib collides with it.
-Pango 1.48 in turn needs GLib >= 2.62. The common denominator — used for GTK2,
-MATE 1.10 and GIMP 2.10 — is the c.2016 stack, built by
-`scripts/build-deps.sh` into `$GTK2_PREFIX`:
+One stack serves GTK+ 2.24.33, MATE 1.10 and GIMP 2.10. MATE 1.10 sets the
+upper bound on GLib: it defines compatibility functions GLib added later
+(`libmatekbd` defines its own `g_strv_equal`, which GLib 2.60 declares), so a
+2.60+ GLib collides with it. GIMP 2.10 sets the lower bound: it needs GLib
+>= 2.54.2 (2.10.20+ needs 2.56.2). The common denominator is **GLib 2.56.2**
+(the rest of the stack is the c.2016 era), built by `scripts/build-deps.sh`
+into `$GTK2_PREFIX`:
 
 | Library | Version | Why |
 |---|---|---|
-| GLib | 2.48.2 | base |
+| GLib | 2.56.2 | base; the GTK2/MATE-1.10/GIMP-2.10 common denominator |
 | ATK | 2.18.0 | base |
 | Pango | 1.38.1 | with Xft (pangoxft), needed by marco |
 | gdk-pixbuf | 2.34.0 | base |
@@ -31,7 +32,7 @@ MATE 1.10 and GIMP 2.10 — is the c.2016 stack, built by
 | libcroco | 0.6.13 | librsvg |
 | librsvg | 2.40.20 | mate-panel clock |
 | libsigc++ / glibmm / gtkmm | 2.10 / 2.48 / 2.24 | mate-system-monitor (gtkmm 2.4 C++ bindings); also cairomm/pangomm/atkmm |
-| poppler-glib | 0.42.0 | atril (PDF) |
+| poppler-glib | 0.50.0 | atril (PDF) and GIMP's PDF import (GIMP needs >= 0.50) |
 
 cairo, fontconfig, FreeType, HarfBuzz and fribidi stay on the host.
 
