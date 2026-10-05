@@ -45,7 +45,8 @@ export PATH="$PATH:$GTK2_CACHE/hosttools/usr/lib/icon-naming-utils"
     -Wno-error=declaration-missing-parameter-type \
     -Wno-error=deprecated-declarations}"
 export CFLAGS="${MATE_CFLAGS} ${CFLAGS:-}"
-export CXXFLAGS="${MATE_CFLAGS} ${CXXFLAGS:-}"
+# The gtkmm C++ components need a C++11-or-later dialect under a modern g++.
+export CXXFLAGS="-std=gnu++14 -fpermissive ${MATE_CFLAGS} ${CXXFLAGS:-}"
 export CPPFLAGS="-I$GTK2_PREFIX/include ${CPPFLAGS:-}"
 export LDFLAGS="-L$GTK2_PREFIX/lib -Wl,-rpath,$GTK2_PREFIX/lib ${LDFLAGS:-}"
 
@@ -65,6 +66,7 @@ extra_flags() {
         engrampa)       printf '%s' "";;
         caja)           printf '%s' "--disable-packagekit --disable-update-mimedb --disable-icon-update";;
         pluma)          printf '%s' "--disable-spell --disable-python";;
+        atril)          printf '%s' "--disable-comics --disable-djvu --disable-dvi --disable-t1lib --disable-xps --disable-epub --without-keyring --disable-introspection";;
         *)              printf '%s' "";;
     esac
 }
@@ -78,6 +80,17 @@ build_one() {
         log "$c-$v not fetched; fetching"
         "$GTK2_ROOT/scripts/fetch-mate.sh" "$c"
     fi
+
+    # Minimal source accommodations for a modern compiler/libstdc++, kept as
+    # tracked patches (never applied twice).
+    for p in "$GTK2_ROOT"/config/patches/"$c"*.patch; do
+        [ -f "$p" ] || continue
+        if patch -d "$src" -p1 --dry-run --forward -s <"$p" >/dev/null 2>&1; then
+            log "applying $(basename "$p")"
+            patch -d "$src" -p1 --forward -s <"$p"
+        fi
+    done
+
     bdir="$GTK2_PREFIX/build/mate/$c-$v"
     step "Building $c $v"
 

@@ -55,6 +55,16 @@ LIBCANBERRA_VERSION=0.30
 # GLib >= 2.50.
 LIBCROCO_VERSION=0.6.13
 LIBRSVG_VERSION=2.40.20
+# The gtkmm 2.4 C++ bindings for mate-system-monitor (glibmm 2.48 matches the
+# era GLib 2.48; gtkmm 2.24 is the GTK2 binding).
+LIBSIGCPP_VERSION=2.10.0
+GLIBMM_VERSION=2.48.1
+CAIROMM_VERSION=1.12.0
+PANGOMM_VERSION=2.40.1
+ATKMM_VERSION=2.24.2
+GTKMM_VERSION=2.24.5
+# poppler-glib for atril: a GTK2-era build linked against the prefix GLib.
+POPPLER_VERSION=0.42.0
 
 # --- the compositor used for the test suite ----------------------------------
 # Distro packages are extracted into a local prefix (no root needed); see

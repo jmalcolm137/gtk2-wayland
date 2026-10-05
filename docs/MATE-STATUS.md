@@ -30,6 +30,8 @@ MATE 1.10 and GIMP 2.10 — is the c.2016 stack, built by
 | libcanberra | 0.30 | marco, settings-daemon, media |
 | libcroco | 0.6.13 | librsvg |
 | librsvg | 2.40.20 | mate-panel clock |
+| libsigc++ / glibmm / gtkmm | 2.10 / 2.48 / 2.24 | mate-system-monitor (gtkmm 2.4 C++ bindings); also cairomm/pangomm/atkmm |
+| poppler-glib | 0.42.0 | atril (PDF) |
 
 cairo, fontconfig, FreeType, HarfBuzz and fribidi stay on the host.
 
@@ -41,7 +43,7 @@ MATE process must be its era build.
 
 ## Build matrix
 
-Built (27 components):
+Built (29 components):
 
 ```
 mate-common        mate-desktop      libmatekbd        libmateweather
@@ -50,7 +52,8 @@ marco              mate-panel        mate-applets      mate-session-manager
 mate-settings-daemon  mate-control-center  mate-netbook  mate-netspeed
 mate-sensors-applet   mate-media       mate-screensaver  caja
 caja-extensions    engrampa          eom               pluma
-mate-terminal      mate-utils        mate-calc (1.8)
+mate-terminal      mate-utils        mate-calc (1.8)   mate-system-monitor
+atril
 ```
 
 Verified running and rendering under the shim (`scripts/run-app.sh --capture`):
@@ -80,8 +83,6 @@ placement, per-element 4-byte padding, and the surface-pattern matrix sign).
 | mate-power-manager | era upower + libnotify |
 | mate-polkit | era polkit (host needs GLib >= 2.62) |
 | mate-user-share | gobject-introspection >= 2.82 / era deps |
-| mate-system-monitor | gtkmm 2.4 / glibmm 2.4 / giomm 2.4 (C++ bindings) |
-| atril | poppler-glib with the GTK2 API |
 | mozo | Python 2 + pygtk |
 | python-caja | Python 2 |
 | caja-dropbox | proprietary Dropbox; out of scope |

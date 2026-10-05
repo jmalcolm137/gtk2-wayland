@@ -24,7 +24,7 @@ if HOSTTOOLS="$(stage_glib_tools)" && [ -n "$HOSTTOOLS" ]; then
 fi
 
 WANT=("$@")
-[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra libcroco librsvg)
+[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra libcroco librsvg libsigcpp glibmm cairomm pangomm atkmm gtkmm poppler)
 
 export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:$GTK2_PREFIX/share/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$GTK2_PREFIX/bin:$PATH"
@@ -100,6 +100,25 @@ autotools_build() {
 }
 
 want() { local w; for w in "${WANT[@]}"; do [ "$w" = "$1" ] && return 0; done; return 1; }
+
+# C++ bindings (gtkmm 2.4 stack) need c++ flags, not the C ones (DEP_CFLAGS
+# carries -std=gnu11, which g++ rejects), and era C++ needs a few relaxations
+# under a modern compiler.
+cxx_build() {
+    local name="$1" src="$2"; shift 2
+    (
+        export CFLAGS="-O2 -g -fcommon -D_GNU_SOURCE -DG_CONST_RETURN=const \
+-include stdlib.h -include stdint.h"
+        export CXXFLAGS="-O2 -g -std=gnu++14 -fcommon -D_GNU_SOURCE -DG_CONST_RETURN=const \
+-include stdlib.h -include stdint.h -fpermissive \
+-Wno-error=deprecated-declarations -Wno-error=unused-parameter \
+-Wno-error=cast-function-type -Wno-error=class-memaccess \
+-Wno-error=deprecated-copy -Wno-error=stringop-overflow \
+-Wno-error=array-bounds -Wno-error=mismatched-new-delete \
+-Wno-error=maybe-uninitialized -Wno-error=restrict"
+        autotools_build "$name" "$src" "$@"
+    )
+}
 
 # --------------------------------------------------------------------- GLib --
 if want glib; then
@@ -190,8 +209,11 @@ fi
 if want libwnck; then
     src="$(fetch_tar "libwnck-$LIBWNCK_VERSION" \
         "https://download.gnome.org/sources/libwnck/2.30/libwnck-$LIBWNCK_VERSION.tar.xz")"
+    # No startup-notification: it links the host libstartup-notification, which
+    # calls XGetXCBConnection() on our (non-XCB) Display and crashes libwnck
+    # users such as mate-system-monitor.
     autotools_build "libwnck-$LIBWNCK_VERSION" "$src" \
-        --disable-gtk-doc --disable-introspection
+        --disable-gtk-doc --disable-introspection --disable-startup-notification
 fi
 
 # ------------------------------------------------------------------ libsoup --
@@ -235,6 +257,59 @@ if want librsvg; then
     ( export CPPFLAGS="-I/usr/include/libxml2 -include libxml/parser.h $CPPFLAGS"
       autotools_build "librsvg-$LIBRSVG_VERSION" "$src" \
           --disable-gtk-doc --disable-introspection )
+fi
+
+# ------------------------------------------------- gtkmm 2.4 C++ bindings --
+if want libsigcpp; then
+    src="$(fetch_tar "libsigc++-$LIBSIGCPP_VERSION" \
+        "https://download.gnome.org/sources/libsigc++/2.10/libsigc++-$LIBSIGCPP_VERSION.tar.xz")"
+    cxx_build "libsigc++-$LIBSIGCPP_VERSION" "$src" --disable-documentation
+fi
+
+if want glibmm; then
+    src="$(fetch_tar "glibmm-$GLIBMM_VERSION" \
+        "https://download.gnome.org/sources/glibmm/2.48/glibmm-$GLIBMM_VERSION.tar.xz")"
+    cxx_build "glibmm-$GLIBMM_VERSION" "$src" --disable-documentation --disable-fulldocs
+    # glibmm 2.48.1 has a one-character slip in its (inline, header-only)
+    # GPrivate wrapper: gobj() returns the GPrivate struct where every sibling
+    # returns its address.  GLib's GPrivate is a struct since 2.32, so this
+    # only compiles if corrected.
+    sed -i 's|return gobject_; }|return \&gobject_; }|' \
+        "$GTK2_PREFIX/include/glibmm-2.4/glibmm/threads.h"
+fi
+
+if want cairomm; then
+    src="$(fetch_tar "cairomm-$CAIROMM_VERSION" \
+        "https://download.gnome.org/sources/cairomm/1.12/cairomm-$CAIROMM_VERSION.tar.xz")"
+    cxx_build "cairomm-$CAIROMM_VERSION" "$src" --disable-documentation --disable-fulldocs
+fi
+
+if want pangomm; then
+    src="$(fetch_tar "pangomm-$PANGOMM_VERSION" \
+        "https://download.gnome.org/sources/pangomm/2.40/pangomm-$PANGOMM_VERSION.tar.xz")"
+    cxx_build "pangomm-$PANGOMM_VERSION" "$src" --disable-documentation --disable-fulldocs
+fi
+
+if want atkmm; then
+    src="$(fetch_tar "atkmm-$ATKMM_VERSION" \
+        "https://download.gnome.org/sources/atkmm/2.24/atkmm-$ATKMM_VERSION.tar.xz")"
+    cxx_build "atkmm-$ATKMM_VERSION" "$src" --disable-documentation --disable-fulldocs
+fi
+
+if want gtkmm; then
+    src="$(fetch_tar "gtkmm-$GTKMM_VERSION" \
+        "https://download.gnome.org/sources/gtkmm/2.24/gtkmm-$GTKMM_VERSION.tar.xz")"
+    cxx_build "gtkmm-$GTKMM_VERSION" "$src" --disable-documentation --disable-fulldocs
+fi
+
+# ---------------------------------------------------------------- poppler --
+if want poppler; then
+    src="$(fetch_tar "poppler-$POPPLER_VERSION" \
+        "https://poppler.freedesktop.org/poppler-$POPPLER_VERSION.tar.xz")"
+    autotools_build "poppler-$POPPLER_VERSION" "$src" \
+        --disable-gtk-doc --disable-cpp --enable-cairo-output \
+        --disable-poppler-qt4 --disable-poppler-qt5 \
+        --disable-libopenjpeg --disable-utils
 fi
 
 step "Dependency stack ready in $GTK2_PREFIX"

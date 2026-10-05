@@ -1,0 +1,13 @@
+--- a/src/lsof.cpp
++++ b/src/lsof.cpp
+@@ -140,7 +140,9 @@
+ 
+         void update_count(unsigned count)
+         {
+-            string s = static_cast<std::ostringstream&>(std::ostringstream() << count).str();
++            std::ostringstream oss;
++            oss << count;
++            string s = oss.str();
+             gtk_label_set_text(this->count, s.c_str());
+         }
+ 

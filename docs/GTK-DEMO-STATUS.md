@@ -1,43 +1,55 @@
 # gtk-demo on the shim — status
 
-`scripts/test-gtk-demo.sh` renders **every** gtk-demo demo (and the gtk-demo
-browser itself) under the headless compositor twice — once on the shim's Render
-path and once on cairo's core-protocol fallback — and compares the frames. The
-fallback is cairo's own long-standing path, so a static demo must match it.
+`scripts/test-gtk-demo.sh` renders **every** gtk-demo demo and the gtk-demo
+browser itself under the headless compositor on the shim's Render path and on
+cairo's core-protocol fallback, and compares the frames. The fallback is
+cairo's own long-standing path, so a static demo must match it.
 
-Animated demos are detected by capturing the fallback twice: if the fallback
-itself differs between the two frames, the demo is skipped. `tests/gtk-demo-walker.c`
-builds against the gtk-demo objects and runs one demo per invocation.
+A demo is treated as **animated** if either path changes between two frames
+captured a second apart; those are skipped rather than compared. Everything
+else must match the fallback within a 4% pixel threshold.
 
-## Current result
+## Result
 
-The browser and 35 of 38 demos match the fallback (the browser to 0.03%).
-Three remain:
+**All static demos match the core fallback** (browser to 0.03%). Two demos are
+legitimately animated and skipped:
 
-| Demo | Symptom | Cause |
-|---|---|---|
-| Effects | reflection row missing (~20%) | the offscreen window is mirrored with a **source-picture transform** faded by a depth-8 alpha mask; the mask pixmap ends up empty, so nothing composites |
-| Rotated Text | blank (~50%) | cairo renders the rotated glyphs through a **temporary surface + transform** that is never flushed/composited to the window |
-| Multiple Views | ~9% | the two text views sit a few pixels higher than the fallback (a scroll-position/line-height rounding difference); every line therefore differs |
+| Demo | Why skipped |
+|---|---|
+| Pixbufs | the pixbufs animate continuously |
+| Automatic scrolling | the text view scrolls continuously |
 
-All three involve picture transforms or a subtle text-view scroll offset.
-Everything cairo draws axis-aligned (the overwhelming majority of GTK2)
-matches.
+Everything else — including the transform-heavy beacons below — is a 0.00%
+pixel match:
 
-## What this test caught and fixed
+* **Rotated Text** — the rotated `I ♥ GTK+` ring, drawn through cairo's
+  transformed-glyph path.
+* **Effects** — the offscreen-window mirror with its flipped, gradient-faded
+  reflection.
+* **Multiple Views** — two text views sharing one buffer.
+* **Button Boxes, Tool Palette, Icon View, Images, Application main window**,
+  and the rest.
 
-* **GtkFrame titles and many labels vanished** (Button Boxes and others):
-  cairo clears a picture clip with `ChangePicture(CPClipMask = None)`, which we
-  ignored, leaving a stale one-glyph rectangle clip in force.
+## What the walker found (and fixed)
+
+Each of these was a real shim bug the fallback comparison caught:
+
+* **GtkFrame titles and many labels vanished** (Button Boxes): cairo clears a
+  picture clip with `ChangePicture(CPClipMask = None)`, which we ignored,
+  leaving a stale one-glyph clip.
 * **Black squares behind every icon** (Tool Palette) and a **black Icon View
   background**: `XPutImage` forced alpha to `0xff`, so cairo's premultiplied
-  ARGB icon uploads into depth-32 pixmaps lost transparency.
-* **Icons missing/wrong** (caja): the surface-pattern matrix had the wrong sign,
-  pushing drawable sources out of their pattern.
-* **Text spacing/position** (everywhere): glyph bitmap bearing and per-element
-  padding were not applied.
+  ARGB icon uploads lost transparency.
 * **Every gradient's colours were garbage**: Create*Gradient stops are sent as
-  all positions then all colours, which we read interleaved.
+  *all positions then all colours*, which we read interleaved.
+* **Transformed gradients were evaluated in the wrong space**: `set_source`
+  returned from the gradient branch before applying the picture transform.
+* **Rotated Text blank / Effects reflection missing / Multiple Views offset**:
+  cairo's glyph indices are compound (`font << 24 | glyph`), so the
+  array-per-glyph-set grew to 268M entries and the allocation failure made
+  cairo abandon the draw. A hash map keyed by glyph id fixes all three.
+* Plus glyph bitmap bearing/per-element padding, and the surface-pattern matrix
+  sign.
 
 ## Running it
 
@@ -47,4 +59,4 @@ scripts/test-gtk-demo.sh --jobs 8 --threshold 4
 ```
 
 Frames and per-demo logs land in `tests/out/gtk-demo/`. The script exits
-non-zero when a static demo differs from the fallback.
+non-zero if any static demo differs from the fallback.
