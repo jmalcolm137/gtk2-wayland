@@ -24,8 +24,7 @@ scripts/run-tests-labwc.sh     # gtester over gtk/tests, inside nested labwc
 
 ## Result
 
-`gtester` over the 14 `gtk/tests` programs: **12 pass, 2 fail** (the two
-failures are entirely synthetic-input and test-only; they are identical with
+`gtester` over the 14 `gtk/tests` programs: **14 pass, 0 fail** (identical with
 Render on and off).
 
 | Program | Result | Notes |
@@ -40,32 +39,48 @@ Render on and off).
 | textbuffer | ✅ | |
 | recentmanager | ✅ | |
 | filtermodel | ✅ | |
-| expander | ❌ | synthetic click (`gtk_test_widget_click`) |
+| expander | ✅ | synthetic click (`gtk_test_widget_click`) |
 | action | ✅ | |
 | defaultvalue | ✅ | passes with the era gdk-pixbuf (see below) |
-| testing | ❌ | 4 synthetic-input subtests; `xserver-sync` now passes |
+| testing | ✅ | all synthetic-input subtests pass |
 
-## The failures, precisely
+## The synthetic-input tests (all passing)
 
-### 1. `expander`, and `testing`'s `button-clicks` / `keys-events` / `send-shift-key` / `spin-button-arrows`
-These use GDK's **synthetic event test helpers** (`gtk_test_widget_click`,
-`gdk_test_simulate_button`, `gdk_test_simulate_key`). Those build an `XEvent`
-by hand and submit it with `XSendEvent`; the shim queues it and GDK consumes it,
-but GDK does not dispatch it to the target widget, so the widget never sees the
-click/key.
+`expander` and `testing`'s `button-clicks` / `keys-events` / `send-shift-key` /
+`spin-button-arrows` drive GDK's **synthetic event test helpers**
+(`gtk_test_widget_click`, `gdk_test_simulate_button`, `gdk_test_simulate_key`).
+Those build an `XEvent` by hand and submit it with `XSendEvent`; the shim queued
+and delivered it, but the widget never saw it. Two shim gaps, both found by
+comparing a synthesised event against a real one:
 
-* Characterised with a standalone probe: after `gtk_test_widget_click`,
-  `XPending()` is 2 and `gtk_events_pending()` is 1; after GDK's drain,
-  `XPending()` is 0 and the widget handlers never ran.
-* The shim's `XSendEvent` itself works: a pure Xlib probe sends a `ButtonPress`,
-  sees `XPending() == 2`, and reads the event back with `XNextEvent` intact.
-* **Real input works.** Driving the headless compositor's input replay
-  (`motion` / `button` / `key`) at a GTK2 window delivers a real `KeyPress`
-  (`keyval=0x6c`) and button events to the toolkit. This is the path real
-  applications use; the synthetic helpers are test-only.
+1. **`XWarpPointer` produced no crossing/motion events.** GDK's client-side
+   window hit test (`_gdk_window_get_input_window_for_event` →
+   `get_pointer_window`) only descends into child windows when its
+   `toplevel_under_pointer` is set, which happens on `EnterNotify`. A real
+   server emits the Leave/Enter and Motion for the new location on a warp.
+   `XWarpPointer` now drives the same path as a real motion, so a warped then
+   synthesised click resolves to the widget's client-side window.
+2. **The XKB key *type* had no modifier→level map.** GDK (like Xlib) derives the
+   shift level from `XkbKeyTypeRec.map`, not directly from the core `ShiftMask`.
+   Our client map had a single type with `map == NULL`, so Shift never selected
+   level 1 and a shifted key reported its unshifted keysym. `XkbGetMap` now
+   builds a one-level and a two-level type (Shift → level 1), and
+   `XkbLookupKeySym` honours the state.
 
-Status: **backlog** — likely GDK's window lookup or event-mask handling for
-`XSendEvent`-delivered core events. It does not affect MATE or GIMP.
+Two further focus fixes were needed for `keys-events` (which asserts the button
+has focus right after `gtk_widget_grab_focus()`):
+
+3. **Focus arrived too late.** Our `XSendEvent`-era focus only came from the
+   compositor's `wl_keyboard.enter`, which lands after `gtk_widget_show_now()`
+   has already returned. A window manager focuses a newly mapped toplevel, so
+   the shim now emits the matching FocusIn with the map (after the `MapNotify`)
+   and a FocusOut when the focus window is destroyed.
+4. **A stale `wl_keyboard.leave` deactivated the wrong window.** `kbd_leave()`
+   delivered FocusOut to whatever `kbd_focus` currently pointed at, ignoring
+   which surface had left. When focus moved A → B the compositor's delayed
+   `leave(A)` aimed a FocusOut at B. It is now matched to the leaving surface;
+   this was the only reason `keys-events` failed when run after another subtest
+   (it passed in isolation).
 
 ### 2. `testing`'s `test_xserver_sync` (now passing)
 This measures whether a draw followed by `gdk_test_render_sync()` (`XSync`) is
@@ -107,3 +122,13 @@ the common era for GTK2/MATE/GIMP) removed the `liststore` crash and the
    `XftDrawCharFontSpec`, `XftDefaultHasRender`) on the shim's own font path.
    (Xft's Render-level `XftGlyphSpecRender` stays a no-op; GTK2 uses
    pangocairo, which goes through Render directly. See `docs/RENDER-STATUS.md`.)
+6. `XWarpPointer` now emits the crossing and motion events for the new pointer
+   position (see the synthetic-input section above).
+7. `XkbGetMap` emits one- and two-level key types with a real modifier→level
+   map so Shift selects level 1; `XkbLookupKeySym` honours the state.
+8. A normal toplevel gets `FocusIn` with its map and `FocusOut` when the focus
+   window is destroyed, instead of waiting for the compositor's
+   `wl_keyboard.enter`.
+9. `wl_keyboard.leave` is matched to the surface that actually lost the
+   keyboard, so a delayed leave cannot focus out the window that just took
+   focus.
