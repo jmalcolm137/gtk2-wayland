@@ -37,26 +37,35 @@ record the revision here.
 
 ## Status
 
-**Early.** The harness and the gap analysis come first; the toolkit follows.
-
 | M | Scope | State |
 |---|---|---|
 | **M0** | repo, docs, version pinning, nested-labwc test harness | ✅ done |
 | **M1** | GTK+ 2.24.33 configures, builds and installs against the shim, unmodified | ✅ done |
 | **M2** | a GTK2 window opens, draws and takes real input under the shim | ✅ done |
-| **M3** | GTK2's own GTest suite runs under `gtester` in nested labwc | 🚧 12/14 programs pass; the 2 failures are the synthetic-input tests, explained in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md) |
-| **M4** | MATE 1.10 applications build unmodified and run in labwc | 🚧 caja, eom, engrampa, pluma, mate-terminal, mate-calc and the wider set build and render; see [docs/MATE-STATUS.md](docs/MATE-STATUS.md) |
-| **M5** | GIMP 2.10 builds unmodified and runs in labwc | ⬜ |
+| **M3** | GTK2's own GTest suite runs under `gtester` in nested labwc | ✅ 14/14 |
+| **M4** | MATE 1.10 applications build unmodified and run in labwc | 🚧 29 components build and run; the rest are blocked on era libraries, Python 2 or proprietary code — [docs/MATE-STATUS.md](docs/MATE-STATUS.md) |
+| **M5** | GIMP 2.10 builds unmodified and runs with no XWayland | ✅ GIMP 2.10.24 builds, runs and renders — [docs/GIMP-STATUS.md](docs/GIMP-STATUS.md) |
 
-The shim now provides the full **Render** extension and it is on by default
-(text renders pixel-correctly); `MW_RENDER=0` selects cairo's core-protocol
-fallback. See [docs/RENDER-STATUS.md](docs/RENDER-STATUS.md).
+The shim provides the full **Render** extension, on by default (text renders
+pixel-correctly); `MW_RENDER=0` selects cairo's core-protocol fallback. GTK2
+gtester is 14/14 and gtk-demo matches the core fallback with Render on.
 
-GTK2 is built **unmodified** against the MATE 1.10-era supporting stack (GLib
-2.48, ATK 2.18, Pango 1.38, gdk-pixbuf 2.34), the common era for GTK2, MATE 1.10
-and GIMP 2.10, so that the only non-period-correct component in the process is
-our `libX11` shim. The shim's own status (libXt, Open Motif, XV and NEdit
-running unmodified) is recorded in
+Notable shim work landed along the way, each with its own note:
+
+* the Render path's ruler-tick clip bug — [docs/RENDER-STATUS.md](docs/RENDER-STATUS.md)
+* nested-popup / menu focus handling — [docs/INPUT-STATUS.md](docs/INPUT-STATUS.md)
+* EWMH `_NET_WM_STATE` fullscreen and maximize — [docs/INPUT-STATUS.md](docs/INPUT-STATUS.md)
+
+The last two let a GTK2 application's own submenus and window-state commands
+behave normally rather than only the compositor chrome.
+
+GTK2 is built **unmodified** against a single supporting stack shared with
+MATE 1.10 and GIMP 2.10: **GLib 2.56.2** (GIMP 2.10.20+ needs ≥ 2.56.2; MATE
+1.10 defines compatibility functions GLib added in 2.60, so it must stay
+< 2.60), with ATK 2.18, Pango 1.38 and gdk-pixbuf 2.34. That is the common era
+for the three, so the only non-period-correct component in the process is our
+`libX11` shim. The shim's own status (libXt, Open Motif, XV and NEdit running
+unmodified) is recorded in
 [`xlib-wayland/README.md`](https://github.com/jmalcolm137/xlib-wayland).
 
 ## Quick start
@@ -68,8 +77,8 @@ scripts/fetch-sources.sh
 # 1. build & install the shim (xlib-wayland) into the prefix
 scripts/build-shim.sh
 
-# 2. build the MATE 1.10-era supporting stack (GLib 2.48, ATK, Pango,
-#    gdk-pixbuf) into the prefix, so GTK2 sees period-correct libraries
+# 2. build the GTK2/MATE/GIMP common supporting stack (GLib 2.56.2, ATK,
+#    Pango, gdk-pixbuf) into the prefix, so GTK2 sees period-correct libraries
 scripts/build-deps.sh
 
 # 3. build stock GTK+ 2.24.33 against the prefix
