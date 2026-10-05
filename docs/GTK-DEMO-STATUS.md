@@ -11,18 +11,18 @@ builds against the gtk-demo objects and runs one demo per invocation.
 
 ## Current result
 
-The browser and 34 of 38 demos match the fallback (the browser to 0.03%).
-Four remain:
+The browser and 35 of 38 demos match the fallback (the browser to 0.03%).
+Three remain:
 
 | Demo | Symptom | Cause |
 |---|---|---|
-| Images | partial frame differs (~34%) | the demo animates (robot, progressive loading); the measured diff is dominated by animation phase |
-| Effects | reflection row missing (~20%) | draws the offscreen window through a **source-picture transform** (vertical flip) plus a gradient mask |
-| Rotated Text | blank (~50%) | cairo renders the rotated glyphs through a **temporary surface + transform**; the glyph run arrives in the temp surface's coordinates and is never composited back |
-| Multiple Views | ~9% | the text view is scrolled a few pixels differently at capture time |
+| Effects | reflection row missing (~20%) | the offscreen window is mirrored with a **source-picture transform** faded by a depth-8 alpha mask; the mask pixmap ends up empty, so nothing composites |
+| Rotated Text | blank (~50%) | cairo renders the rotated glyphs through a **temporary surface + transform** that is never flushed/composited to the window |
+| Multiple Views | ~9% | the two text views sit a few pixels higher than the fallback (a scroll-position/line-height rounding difference); every line therefore differs |
 
-All four are **transformed-source / transformed-destination** paths. Everything
-that cairo draws axis-aligned (the overwhelming majority of GTK2) matches.
+All three involve picture transforms or a subtle text-view scroll offset.
+Everything cairo draws axis-aligned (the overwhelming majority of GTK2)
+matches.
 
 ## What this test caught and fixed
 

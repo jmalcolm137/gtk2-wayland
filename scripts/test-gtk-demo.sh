@@ -49,11 +49,11 @@ gcc -O0 -I"$GTK2_CACHE/src/gtk+-2.24.33/demos/gtk-demo" \
 rm -rf "$OUT"; mkdir -p "$OUT"
 
 # A runner: one demo, one render path, one frame.
-run_one() { # index path
-    local i="$1" path="$2" rt
+run_one() { # index path [timeout]
+    local i="$1" path="$2" tout="${3:-3}" rt
     rt="$(mktemp -d "$OUT/rt.XXXXXX")"
-    XDG_RUNTIME_DIR="$rt" timeout 8 "$PREFIX/build/xlib-wayland/headless-compositor" \
-        --socket "gd$i$path" --size 1300x950 --timeout 3 \
+    XDG_RUNTIME_DIR="$rt" timeout 12 "$PREFIX/build/xlib-wayland/headless-compositor" \
+        --socket "gd$i$path" --size 1300x950 --timeout "$tout" \
         --output "$OUT/d$i-$path.png" >/dev/null 2>&1 &
     local hc=$!
     sleep 0.3
@@ -73,10 +73,12 @@ mapfile -t TITLES < <("$WALKER" --list 2>/dev/null)
 N=${#TITLES[@]}
 step "gtk-demo: $N demos, render vs fallback"
 
-# Two fallback frames (to detect animation) and one render frame each.
+# Two fallback frames at different times (to detect animation), one render.
+# The different --timeout values give animation a chance to be at a different
+# phase, which the same-time pair could not.
 args=()
-for i in $(seq 0 $((N-1))); do args+=("$i" rn "$i" fb1 "$i" fb2); done
-printf '%s\n' "${args[@]}" | xargs -P "$JOBS" -n 2 bash -c 'run_one "$0" "$1"'
+for i in $(seq 0 $((N-1))); do args+=("$i" rn 3 "$i" fb1 3 "$i" fb2 6); done
+printf '%s\n' "${args[@]}" | xargs -P "$JOBS" -n 3 bash -c 'run_one "$0" "$1" "$2"'
 
 # ------------------------------------------------- gtk-demo browser itself --
 # The browser is a GtkTreeView + text view; capture it on both paths too.
