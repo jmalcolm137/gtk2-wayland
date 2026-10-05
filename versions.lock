@@ -19,14 +19,14 @@ GTK2_URL=https://download.gnome.org/sources/gtk+/2.24/gtk+-2.24.33.tar.xz
 # sha256 of the tarball as served by download.gnome.org
 GTK2_SHA256=ac2ac757f5942d318a311a54b0c80b5ef295f299c2a73c632f6bfb1ff49cc6da
 
-# --- the supporting stack (MATE 1.10 era, c. 2016) ---------------------------
-# One stack must serve GTK+ 2.24.33, MATE 1.10 and GIMP 2.10.  MATE 1.10 is the
-# oldest and the most demanding: it defines compat functions (e.g. g_strv_equal)
-# that GLib added in 2.60, so a 2.60+ stack collides with it.  Pango 1.48 in
-# turn requires GLib >= 2.62.  The common denominator is the MATE-era stack
-# below; GTK2 and GIMP only set lower bounds and build against it happily.
-# (glib/atk/dconf use autotools here; pango/gdk-pixbuf use meson.)
-GLIB_VERSION=2.48.2
+# --- the supporting stack (GTK2/MATE/GIMP common denominator) ----------------
+# One stack must serve GTK+ 2.24.33, MATE 1.10 and GIMP 2.10.  Two bounds fix
+# GLib: GIMP 2.10 needs >= 2.54.2 (2.10.20+ needs 2.56.2), and MATE 1.10
+# defines compat functions (e.g. g_strv_equal) that GLib added in 2.60, so a
+# 2.60+ GLib collides with it.  GLib 2.56.2 is the common denominator, and it
+# is GIMP 2.10's own era (2018).  Everything else only sets lower bounds.
+# (glib/atk/pango/gdk-pixbuf/dconf all build via autotools here.)
+GLIB_VERSION=2.56.2
 ATK_VERSION=2.18.0
 PANGO_VERSION=1.38.1
 GDK_PIXBUF_VERSION=2.34.0
@@ -63,8 +63,33 @@ CAIROMM_VERSION=1.12.0
 PANGOMM_VERSION=2.40.1
 ATKMM_VERSION=2.24.2
 GTKMM_VERSION=2.24.5
-# poppler-glib for atril: a GTK2-era build linked against the prefix GLib.
-POPPLER_VERSION=0.42.0
+# poppler-glib: atril (PDF) and GIMP's PDF import.  GIMP 2.10.24 requires
+# poppler-glib >= 0.50.0; atril only needs >= 0.16, so one build serves both.
+POPPLER_VERSION=0.50.0
+
+# --- GIMP 2.10 ---------------------------------------------------------------
+# GIMP 2.10 is the last GTK2 GIMP.  It is a GEGL-based application: babl and
+# GEGL are its paint/processing engine and libmypaint supplies the MyPaint
+# brush tool.  GIMP 2.10.24 requires GLib 2.56.2, GEGL 0.4.26, babl 0.1.78 and
+# libmypaint 1.3.0; we build GEGL 0.4.30 (which additionally needs json-glib)
+# and libmypaint 1.6.x.  mypaint-brushes is the brush preset data package.
+GIMP_VERSION=2.10.24
+GEGL_VERSION=0.4.30
+# GIMP 2.10.24 only needs babl >= 0.1.78, but 0.1.78's meson.build uses the
+# pre-1.0 `Description:` keyword that modern meson rejects; babl 0.1.94 is the
+# first release that dropped it (the 0.1.x series is API-stable).
+BABL_VERSION=0.1.94
+JSON_GLIB_VERSION=1.4.4
+LIBMYPAINT_VERSION=1.6.1
+MYPAINT_BRUSHES_VERSION=1.3.0
+# gexiv2 wraps Exiv2 for GIMP's metadata editor.  GIMP 2.10.24 requires
+# >= 0.10.6; the host Exiv2 is 0.28, which only gexiv2 >= 0.14 supports, and
+# 0.14 still exports every call GIMP 2.10.24 makes.
+GEXIV2_VERSION=0.14.3
+# glib-networking supplies the GIO TLS backend; GIMP's configure runs
+# g_tls_backend_supports_tls() and refuses to build without it.  2.56 matches
+# the era GLib and builds its gnutls backend against the host GnuTLS.
+GLIB_NETWORKING_VERSION=2.56.1
 
 # --- the compositor used for the test suite ----------------------------------
 # Distro packages are extracted into a local prefix (no root needed); see

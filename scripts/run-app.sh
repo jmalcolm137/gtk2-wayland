@@ -48,7 +48,7 @@ if [ -n "$CAPTURE" ]; then
         >"$OUT/$APP.ready" 2>"$OUT/$APP.hc.log" &
     HC=$!
     for _ in $(seq 1 100); do grep -q READY "$OUT/$APP.ready" 2>/dev/null && break; sleep 0.05; done
-    XDG_RUNTIME_DIR="$RT" WAYLAND_DISPLAY=mwapp timeout 25 "$RUNNER" >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$RT" WAYLAND_DISPLAY=mwapp timeout "${APP_RUN_TIMEOUT:-25}" "$RUNNER" >/dev/null 2>&1 || true
     wait "$HC" 2>/dev/null || true
     [ -f "$CAPTURE" ] && log "captured $CAPTURE" || warn "no frame captured"
     exit 0

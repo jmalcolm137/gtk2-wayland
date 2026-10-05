@@ -73,6 +73,48 @@ load_versions() {
     export XLIB_WAYLAND_REPO XLIB_WAYLAND_REF GTK2_VERSION
 }
 
+# fetch_tar — download (once) and extract an archive into $GTK2_CACHE/src;
+# echoes the source directory.  The cached copy is named <name> (the URL's
+# extension is not preserved).  The archive's top-level directory must be
+# <name>.
+fetch_tar() { # name url
+    local name="$1" url="$2" tar="$GTK2_DL/$1"
+    mkdir -p "$GTK2_DL" "$GTK2_CACHE/src"
+    [ -f "$tar" ] || { log "downloading $(basename "$url")"; curl -fsSL -o "$tar" "$url" || die "download failed: $url"; }
+    rm -rf "$GTK2_CACHE/src/$name"
+    tar xf "$tar" -C "$GTK2_CACHE/src"
+    printf '%s' "$GTK2_CACHE/src/$name"
+}
+
+# fetch_tar_named — like fetch_tar, but tolerates an archive whose top-level
+# directory is not exactly <name> (GNOME GitLab's generated archives are
+# <project>-<TAG>).  The single extracted directory is renamed to <name>.
+fetch_tar_named() { # name url
+    local name="$1" url="$2" tar="$GTK2_DL/$1" inner tmp="$GTK2_CACHE/src/.$1.extract"
+    mkdir -p "$GTK2_DL" "$GTK2_CACHE/src"
+    [ -f "$tar" ] || { log "downloading $(basename "$url")"; curl -fsSL -o "$tar" "$url" || die "download failed: $url"; }
+    rm -rf "$GTK2_CACHE/src/$name" "$tmp"
+    mkdir -p "$tmp"
+    tar xf "$tar" -C "$tmp"
+    inner="$(find "$tmp" -mindepth 1 -maxdepth 1 | head -1)"
+    [ -n "$inner" ] || { rm -rf "$tmp"; die "empty archive: $url"; }
+    mv "$inner" "$GTK2_CACHE/src/$name"
+    rm -rf "$tmp"
+    printf '%s' "$GTK2_CACHE/src/$name"
+}
+
+# gitify dir — turn an extracted archive into a one-commit git checkout.  Some
+# projects (babl) run `git describe` unconditionally in their meson.build and
+# error when the source is not a repository; the release tarball ships the
+# generated git-version.h instead, which GNOME's GitLab archives omit.
+gitify() {
+    local dir="$1"
+    [ -d "$dir/.git" ] && return 0
+    ( cd "$dir" && git init -q && git add -A >/dev/null 2>&1 && \
+      git -c user.name=build -c user.email=build@localhost \
+          commit -qm import >/dev/null 2>&1 ) || die "gitify failed: $dir"
+}
+
 # Prefer the system automake py-compile: the older in-tree copies use the `imp`
 # module, removed in Python 3.12.
 SYS_PY_COMPILE=""

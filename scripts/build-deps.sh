@@ -24,7 +24,7 @@ if HOSTTOOLS="$(stage_glib_tools)" && [ -n "$HOSTTOOLS" ]; then
 fi
 
 WANT=("$@")
-[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra libcroco librsvg libsigcpp glibmm cairomm pangomm atkmm gtkmm poppler)
+[ "${#WANT[@]}" -eq 0 ] && WANT=(glib atk pango gdk-pixbuf dconf libxklavier libunique gtksourceview pcre vte libwnck libsoup libgtop libcanberra libcroco librsvg libsigcpp glibmm cairomm pangomm atkmm gtkmm poppler json-glib babl gegl libmypaint mypaint-brushes gexiv2 glib-networking)
 
 export PKG_CONFIG_PATH="$GTK2_PREFIX/lib/pkgconfig:$GTK2_PREFIX/share/pkgconfig:${PKG_CONFIG_PATH:-}"
 export PATH="$GTK2_PREFIX/bin:$PATH"
@@ -51,13 +51,7 @@ SYS_PY_COMPILE=""
 for p in /usr/share/automake-*/py-compile; do [ -x "$p" ] && SYS_PY_COMPILE="$p"; done
 
 # ------------------------------------------------------------------ helpers --
-fetch_tar() { # name url
-    local name="$1" url="$2" tar="$GTK2_DL/$1"
-    [ -f "$tar" ] || { log "downloading $(basename "$url")"; curl -fsSL -o "$tar" "$url" || die "download failed: $url"; }
-    rm -rf "$GTK2_CACHE/src/$name"
-    tar xf "$tar" -C "$GTK2_CACHE/src"
-    printf '%s' "$GTK2_CACHE/src/$name"
-}
+# fetch_tar / fetch_tar_named come from lib.sh.
 
 # meson_build name srcdir [meson args...]
 meson_build() {
@@ -123,7 +117,7 @@ cxx_build() {
 # --------------------------------------------------------------------- GLib --
 if want glib; then
     src="$(fetch_tar "glib-$GLIB_VERSION" \
-        "https://download.gnome.org/sources/glib/2.48/glib-$GLIB_VERSION.tar.xz")"
+        "https://download.gnome.org/sources/glib/${GLIB_VERSION%.*}/glib-$GLIB_VERSION.tar.xz")"
     autotools_build "glib-$GLIB_VERSION" "$src" \
         --with-pcre=internal \
         --disable-selinux --disable-fam --disable-xattr --disable-man \
@@ -310,6 +304,100 @@ if want poppler; then
         --disable-gtk-doc --disable-cpp --enable-cairo-output \
         --disable-poppler-qt4 --disable-poppler-qt5 \
         --disable-libopenjpeg --disable-utils
+fi
+
+# ---------------------------------------------------------------- json-glib --
+# GEGL and GIMP both require json-glib-1.0.
+if want json-glib; then
+    src="$(fetch_tar "json-glib-$JSON_GLIB_VERSION" \
+        "https://download.gnome.org/sources/json-glib/${JSON_GLIB_VERSION%.*}/json-glib-$JSON_GLIB_VERSION.tar.xz")"
+    # json-glib 1.4's autotools build insists on the `mesontest` program (the
+    # pre-1.0 spelling of `meson test`), which modern meson no longer installs,
+    # so build it with meson.
+    meson_build "json-glib-$JSON_GLIB_VERSION" "$src" \
+        -Dintrospection=false -Ddocs=false -Dman=false
+fi
+
+# --------------------------------------------------------------------- babl --
+# babl and GEGL are GIMP's pixel-conversion and processing engine.  GNOME's
+# release tarballs for them are not being served right now, so use GitLab's
+# generated archives (fetch_tar_named renames the extracted directory).
+if want babl; then
+    bt="BABL_${BABL_VERSION//./_}"
+    src="$(fetch_tar_named "babl-$BABL_VERSION" \
+        "https://gitlab.gnome.org/GNOME/babl/-/archive/$bt/babl-$bt.tar.bz2")"
+    gitify "$src"
+    meson_build "babl-$BABL_VERSION" "$src" \
+        -Denable-gir=false -Denable-vapi=false -Dwith-docs=false -Dwith-lcms=true
+fi
+
+# --------------------------------------------------------------------- GEGL --
+if want gegl; then
+    gt="GEGL_${GEGL_VERSION//./_}"
+    src="$(fetch_tar_named "gegl-$GEGL_VERSION" \
+        "https://gitlab.gnome.org/GNOME/gegl/-/archive/$gt/gegl-$gt.tar.bz2")"
+    # The GitLab archive omits the generated OpenCL kernel headers that the
+    # release tarball ships; generate them with GEGL's own script.
+    if [ ! -f "$src/opencl/colors.cl.h" ]; then
+        log "generating GEGL OpenCL kernel headers"
+        ( cd "$src" && for cl in opencl/*.cl; do
+              python3 opencl/cltostring.py "$cl" "$cl.h" || exit 1
+          done ) || die "gegl: OpenCL header generation failed"
+    fi
+    meson_build "gegl-$GEGL_VERSION" "$src" \
+        -Ddocs=false -Dworkshop=false -Dintrospection=false -Dvapigen=disabled \
+        -Dgdk-pixbuf=enabled -Dcairo=enabled -Dpango=enabled -Dpangocairo=enabled \
+        -Dlcms=enabled -Dlibtiff=enabled -Dwebp=enabled -Dlibrsvg=enabled \
+        -Dgexiv2=disabled -Dgraphviz=disabled -Djasper=disabled -Dlensfun=disabled \
+        -Dlibav=disabled -Dlibraw=disabled -Dpoppler=disabled -Dpygobject=disabled \
+        -Dsdl2=disabled -Dumfpack=disabled -Dlua=disabled -Dmrg=disabled \
+        -Dmaxflow=disabled -Dopenexr=disabled -Dlibv4l=disabled -Dlibv4l2=disabled \
+        -Dlibspiro=disabled
+fi
+
+# --------------------------------------------------------------- libmypaint --
+# GIMP's MyPaint brush tool.  --disable-gegl keeps it independent of GEGL
+# (built just above); GIMP drives libmypaint directly.
+if want libmypaint; then
+    src="$(fetch_tar "libmypaint-$LIBMYPAINT_VERSION" \
+        "https://github.com/mypaint/libmypaint/releases/download/v$LIBMYPAINT_VERSION/libmypaint-$LIBMYPAINT_VERSION.tar.xz")"
+    # The 1.6.1 tarball ships a release-time config.h with
+    # MYPAINT_CONFIG_USE_GLIB 1.  In an out-of-tree build `#include "config.h"`
+    # searches the includer's directory first and picks that one up instead of
+    # the generated (USE_GLIB 0) header, so drop it.
+    rm -f "$src/config.h"
+    autotools_build "libmypaint-$LIBMYPAINT_VERSION" "$src" \
+        --disable-gegl --disable-docs --disable-i18n
+fi
+
+# ----------------------------------------------------------- mypaint-brushes --
+if want mypaint-brushes; then
+    src="$(fetch_tar "mypaint-brushes-$MYPAINT_BRUSHES_VERSION" \
+        "https://github.com/mypaint/mypaint-brushes/archive/refs/tags/v$MYPAINT_BRUSHES_VERSION.tar.gz")"
+    autotools_build "mypaint-brushes-$MYPAINT_BRUSHES_VERSION" "$src"
+fi
+
+# ------------------------------------------------------------------ gexiv2 --
+# GIMP's metadata editor.  Built against the host Exiv2 0.28 (a C++ library
+# with no GLib dependency) and our prefix GLib.
+# --------------------------------------------------------- glib-networking --
+# GIO's TLS backend.  GIMP 2.10's configure runs g_tls_backend_supports_tls()
+# and fails without it.  The module lands in $GTK2_PREFIX/lib/gio/modules,
+# which our GLib's compiled-in giomoduledir points at.
+if want glib-networking; then
+    src="$(fetch_tar "glib-networking-$GLIB_NETWORKING_VERSION" \
+        "https://download.gnome.org/sources/glib-networking/${GLIB_NETWORKING_VERSION%.*}/glib-networking-$GLIB_NETWORKING_VERSION.tar.xz")"
+    meson_build "glib-networking-$GLIB_NETWORKING_VERSION" "$src" \
+        -Dlibproxy_support=false -Dgnome_proxy_support=false \
+        -Dpkcs11_support=false -Dinstalled_tests=false
+fi
+
+if want gexiv2; then
+    src="$(fetch_tar_named "gexiv2-$GEXIV2_VERSION" \
+        "https://gitlab.gnome.org/GNOME/gexiv2/-/archive/gexiv2-$GEXIV2_VERSION/gexiv2-gexiv2-$GEXIV2_VERSION.tar.bz2")"
+    meson_build "gexiv2-$GEXIV2_VERSION" "$src" \
+        -Dintrospection=false -Dgtk_doc=false -Dvapi=false -Dpython3=false \
+        -Dtools=false -Dtests=false
 fi
 
 step "Dependency stack ready in $GTK2_PREFIX"
