@@ -23,6 +23,7 @@ go into detail; this page says where we are and what is left.
 | Input methods | ✅ | XIM is a real bridge to `zwp_text_input_v3`; `scripts/test-ime.sh` |
 | XSettings | ✅ | the shim owns `_XSETTINGS_S0` and publishes a config file; `scripts/test-settings.sh` (caveats below) |
 | Clipboard (text) | ✅ | X selections ↔ `wl_data_device`; cross-process via the shim's broker |
+| Clipboard (non-text) | 🚧 | full MIME list, `TARGETS`, `image/png`/`text/uri-list` both ways — shim's `docs/CLIPBOARD-STATUS.md`; `PRIMARY`, format-32 targets pending |
 | MATE 1.10 | 🚧 29 components | build and run unmodified — [MATE-STATUS.md](MATE-STATUS.md) |
 | GIMP 2.10 | ✅ | builds, runs, renders with no XWayland — [GIMP-STATUS.md](GIMP-STATUS.md) |
 
@@ -38,7 +39,7 @@ Ordered by user-visible impact.
 | # | Gap | Notes |
 |---|---|---|
 | 1 | **XDND (GDK drag-and-drop)** | GDK's X11 DnD is XDND; it needs a source+destination bridge onto `wl_data_device` (the Motif bridge + broker are the model). **In progress separately — not touched here.** |
-| 2 | **Non-text clipboard** | The clipboard bridge keeps only a text MIME. Images (`image/png`), file lists (`text/uri-list`) and INCR-sized selections are not bridged. |
+| 2 | **Non-text clipboard** | 🚧 The shim now carries the full MIME list, answers `TARGETS`, and serves `image/png`/`text/uri-list` both ways (`xlib-wayland/docs/CLIPBOARD-STATUS.md`). Remaining: `PRIMARY`/`SECONDARY`, format-32 targets, and X→Wayland target enumeration. |
 | 3 | **XEmbed** | `GtkPlug`/`GtkSocket` cross-process embedding (reparent + XFixes + `XSendEvent`) is not bridged. |
 | 4 | **Optional extensions absent** | XFixes, XSync, XDamage, XComposite, XShm, Xinerama, Xcursor (themed ARGB cursors) and XInput2 (tablets/touch/hotplug) are reported absent; GDK degrades. We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
 | 5 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
