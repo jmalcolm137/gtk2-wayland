@@ -64,6 +64,8 @@ Notable shim work landed along the way, each with its own note:
 * EWMH `_NET_WM_STATE` fullscreen and maximize — [docs/INPUT-STATUS.md](docs/INPUT-STATUS.md)
 * XIM as a real input-method bridge — the shim's `docs/IME-STATUS.md`
 * dead-key/compose sequences — the shim's keymap
+* XSETTINGS as a shim-side manager (theme/font/Xft from a config file) — the
+  shim's `docs/XSETTINGS-STATUS.md`, exercised by `scripts/test-settings.sh`
 * cross-process X selections and session-manager properties — the shim's
   `broker.c` / `smprops.c` (`XLIB_WAYLAND_SHARE_SELECTIONS` /
   `XLIB_WAYLAND_SHARE_PROPERTIES`); without them, an in-process X server cannot
@@ -160,7 +162,8 @@ gtk2-wayland/
 │   ├── build-gtk2.sh         # build stock GTK+ 2.24.33 against the shim
 │   ├── gtester               # gtester-compatible GTest driver (MIT)
 │   ├── run-tests-labwc.sh    # gtester inside nested labwc
-│   └── test-ime.sh           # GTK2 im-xim end-to-end under the headless compositor
+│   ├── test-ime.sh           # GTK2 im-xim end-to-end under the headless compositor
+│   └── test-settings.sh      # GTK2 reads the shim's XSETTINGS
 └── docs/                     # findings, status and gap reports
     ├── STATUS.md             # consolidated status + gap list
     ├── GTK2-GAP-ANALYSIS.md  # the authoritative X11 requirement inventory

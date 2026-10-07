@@ -109,9 +109,11 @@ widgets and input — but it matters for:
   for text and, across shim processes, through the shim's selection broker
   (`XLIB_WAYLAND_SHARE_SELECTIONS`). Only text MIME types are carried today.
 * **XSettings** — GDK reads settings from a `_XSETTINGS_S*` selection owner.
-  There is no settings daemon on the shim; GDK falls back to gtkrc/defaults, so
-  theme/font/icon settings are not shared uniformly and cannot change live.
-  Supplying the manager from the shim is the open work.
+  There is no settings daemon inside a shim process, so the shim is the manager:
+  it owns the selection and publishes theme/font/Xft settings from a config file
+  (`XLIB_WAYLAND_XSETTINGS`), re-publishing with a new serial when the file
+  changes. Publishing a daemon's settings across processes and reading
+  dconf/GSettings directly remain open.
 * **Inter-client DnD** — GDK's XDND targets another process's X window, which
   an in-process shim cannot see. Motif DnD is bridged onto the Wayland data
   device; GTK2/XDND is not yet.

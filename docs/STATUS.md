@@ -21,6 +21,7 @@ go into detail; this page says where we are and what is left.
 | Dead keys / compose | ✅ | xkbcommon-compose in the shim's keymap |
 | EWMH window states | ✅ | `_NET_WM_STATE` fullscreen/maximize honoured |
 | Input methods | ✅ | XIM is a real bridge to `zwp_text_input_v3`; `scripts/test-ime.sh` |
+| XSettings | ✅ | the shim owns `_XSETTINGS_S0` and publishes a config file; `scripts/test-settings.sh` (caveats below) |
 | Clipboard (text) | ✅ | X selections ↔ `wl_data_device`; cross-process via the shim's broker |
 | MATE 1.10 | 🚧 29 components | build and run unmodified — [MATE-STATUS.md](MATE-STATUS.md) |
 | GIMP 2.10 | ✅ | builds, runs, renders with no XWayland — [GIMP-STATUS.md](GIMP-STATUS.md) |
@@ -37,14 +38,18 @@ Ordered by user-visible impact.
 | # | Gap | Notes |
 |---|---|---|
 | 1 | **XDND (GDK drag-and-drop)** | GDK's X11 DnD is XDND; it needs a source+destination bridge onto `wl_data_device` (the Motif bridge + broker are the model). **In progress separately — not touched here.** |
-| 2 | **XSettings** | GDK reads settings from a `_XSETTINGS_S*` selection owner; there is none, so it falls back to gtkrc/defaults. No uniform theme/font/icon across processes and no live changes. *(Work started.)* |
-| 3 | **Non-text clipboard** | The clipboard bridge keeps only a text MIME. Images (`image/png`), file lists (`text/uri-list`) and INCR-sized selections are not bridged. |
-| 4 | **XEmbed** | `GtkPlug`/`GtkSocket` cross-process embedding (reparent + XFixes + `XSendEvent`) is not bridged. |
-| 5 | **Optional extensions absent** | XFixes, XSync, XDamage, XComposite, XShm, Xinerama, Xcursor (themed ARGB cursors) and XInput2 (tablets/touch/hotplug) are reported absent; GDK degrades. We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
-| 6 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
-| 7 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
-| 8 | **Session management (XSMP)** | Partial `_DT_SM_*` property sharing only; cross-process save/restore/logout coordination is incomplete. |
-| 9 | **Minor** | XIM `delete_surrounding_text` ignored; Xft Render-level entry points are no-ops (inert — GTK2 uses pangocairo). |
+| 2 | **Non-text clipboard** | The clipboard bridge keeps only a text MIME. Images (`image/png`), file lists (`text/uri-list`) and INCR-sized selections are not bridged. |
+| 3 | **XEmbed** | `GtkPlug`/`GtkSocket` cross-process embedding (reparent + XFixes + `XSendEvent`) is not bridged. |
+| 4 | **Optional extensions absent** | XFixes, XSync, XDamage, XComposite, XShm, Xinerama, Xcursor (themed ARGB cursors) and XInput2 (tablets/touch/hotplug) are reported absent; GDK degrades. We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
+| 5 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
+| 6 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
+| 7 | **Session management (XSMP)** | Partial `_DT_SM_*` property sharing only; cross-process save/restore/logout coordination is incomplete. |
+| 8 | **Minor** | XIM `delete_surrounding_text` ignored; Xft Render-level entry points are no-ops (inert — GTK2 uses pangocairo). |
+
+**XSettings caveats.** The shim publishes a *config file*, so a session has to
+provide it (and a MATE-settings bridge would generate one, or relay the daemon's
+`_XSETTINGS_SETTINGS` through the broker). Reload is event-driven rather than
+woken by a timer. See `xlib-wayland/docs/XSETTINGS-STATUS.md`.
 
 ### Inherent to the in-process design (documented non-goals)
 
