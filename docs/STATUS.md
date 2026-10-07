@@ -1,0 +1,60 @@
+# GTK+ 2 on Wayland — consolidated status
+
+This is the index and gap list for the whole port. The per-area documents
+(`RENDER-STATUS.md`, `INPUT-STATUS.md`, `IME-STATUS.md` in the shim,
+`MATE-STATUS.md`, `GIMP-STATUS.md`, `TEST-RESULTS.md`, `GTK-DEMO-STATUS.md`)
+go into detail; this page says where we are and what is left.
+
+> **Note on freshness.** The shim (`xlib-wayland`) moves faster than this tree's
+> prose. Where the two disagree, the shim's `README.md`/`docs/` and the
+> `versions.lock` revision are authoritative.
+
+## What works
+
+| Area | State | Evidence |
+|---|---|---|
+| Build, unmodified | ✅ | GTK+ 2.24.33 configures/builds against the shim; no source patches |
+| Rendering | ✅ | full Render extension on by default; `MW_RENDER=0` falls back to cairo core |
+| gtk-demo | ✅ | every *static* demo matches the core fallback; 2 animated skipped — [GTK-DEMO-STATUS.md](GTK-DEMO-STATUS.md) |
+| GTK2 test suite | ✅ 14/14 | `scripts/run-tests-labwc.sh` under nested labwc — [TEST-RESULTS.md](TEST-RESULTS.md) |
+| Pointer / keyboard / XKB | ✅ | shift levels, focus, popups/menus, wheel, key repeat |
+| Dead keys / compose | ✅ | xkbcommon-compose in the shim's keymap |
+| EWMH window states | ✅ | `_NET_WM_STATE` fullscreen/maximize honoured |
+| Input methods | ✅ | XIM is a real bridge to `zwp_text_input_v3`; `scripts/test-ime.sh` |
+| Clipboard (text) | ✅ | X selections ↔ `wl_data_device`; cross-process via the shim's broker |
+| MATE 1.10 | 🚧 29 components | build and run unmodified — [MATE-STATUS.md](MATE-STATUS.md) |
+| GIMP 2.10 | ✅ | builds, runs, renders with no XWayland — [GIMP-STATUS.md](GIMP-STATUS.md) |
+
+Cross-process fans-out the shim now handles: **selections** via `broker.c`
+(`XLIB_WAYLAND_SHARE_SELECTIONS`) and **session-manager properties** via
+`smprops.c` (`XLIB_WAYLAND_SHARE_PROPERTIES`). Both exist because every shim
+process is its own X server.
+
+## What is left for "full" GTK2
+
+Ordered by user-visible impact.
+
+| # | Gap | Notes |
+|---|---|---|
+| 1 | **XDND (GDK drag-and-drop)** | GDK's X11 DnD is XDND; it needs a source+destination bridge onto `wl_data_device` (the Motif bridge + broker are the model). **In progress separately — not touched here.** |
+| 2 | **XSettings** | GDK reads settings from a `_XSETTINGS_S*` selection owner; there is none, so it falls back to gtkrc/defaults. No uniform theme/font/icon across processes and no live changes. *(Work started.)* |
+| 3 | **Non-text clipboard** | The clipboard bridge keeps only a text MIME. Images (`image/png`), file lists (`text/uri-list`) and INCR-sized selections are not bridged. |
+| 4 | **XEmbed** | `GtkPlug`/`GtkSocket` cross-process embedding (reparent + XFixes + `XSendEvent`) is not bridged. |
+| 5 | **Optional extensions absent** | XFixes, XSync, XDamage, XComposite, XShm, Xinerama, Xcursor (themed ARGB cursors) and XInput2 (tablets/touch/hotplug) are reported absent; GDK degrades. We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
+| 6 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
+| 7 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
+| 8 | **Session management (XSMP)** | Partial `_DT_SM_*` property sharing only; cross-process save/restore/logout coordination is incomplete. |
+| 9 | **Minor** | XIM `delete_surrounding_text` ignored; Xft Render-level entry points are no-ops (inert — GTK2 uses pangocairo). |
+
+### Inherent to the in-process design (documented non-goals)
+
+No cross-process `XSendEvent`; no shared window tree or global root properties
+except what the broker/`smprops` republishes; each process is its own window
+manager and the compositor (or CoW) provides the real WM role. These are not
+"bugs to fix" — they are why the broker exists.
+
+### App-level blockers (not GTK2 port limits)
+
+Remaining MATE components need era `libnotify`/`upower`/`polkit`, Python 2
+(`mozo`, `python-caja`) or proprietary code (`caja-dropbox`). See
+[MATE-STATUS.md](MATE-STATUS.md).

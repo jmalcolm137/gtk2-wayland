@@ -53,16 +53,26 @@ gtester is 14/14 and gtk-demo matches the core fallback with Render on.
 GTK2's input method works as well: with `GTK_IM_MODULE=xim`, `im-xim` drives the
 shim's XIM, which is a real bridge to the compositor's `zwp_text_input_v3`.
 `scripts/test-ime.sh` commits text into a real `GtkEntry` through that path
-(using the headless compositor's scripted input method).
+(using the headless compositor's scripted input method). Dead-key and multi-key
+compose sequences are handled by the shim's keymap.
 
+**The current state and the gap list live in [docs/STATUS.md](docs/STATUS.md).**
 Notable shim work landed along the way, each with its own note:
 
 * the Render path's ruler-tick clip bug — [docs/RENDER-STATUS.md](docs/RENDER-STATUS.md)
 * nested-popup / menu focus handling — [docs/INPUT-STATUS.md](docs/INPUT-STATUS.md)
 * EWMH `_NET_WM_STATE` fullscreen and maximize — [docs/INPUT-STATUS.md](docs/INPUT-STATUS.md)
+* XIM as a real input-method bridge — the shim's `docs/IME-STATUS.md`
+* dead-key/compose sequences — the shim's keymap
+* cross-process X selections and session-manager properties — the shim's
+  `broker.c` / `smprops.c` (`XLIB_WAYLAND_SHARE_SELECTIONS` /
+  `XLIB_WAYLAND_SHARE_PROPERTIES`); without them, an in-process X server cannot
+  see another process's selection or `_DT_SM_*` state
 
-The last two let a GTK2 application's own submenus and window-state commands
-behave normally rather than only the compositor chrome.
+The input and bridge items above let a GTK2 application's own submenus and
+window-state commands behave normally rather than only the compositor chrome;
+the broker items let the MATE/CDE pieces that expect a shared server (clipboard,
+session state) work across processes.
 
 GTK2 is built **unmodified** against a single supporting stack shared with
 MATE 1.10 and GIMP 2.10: **GLib 2.56.2** (GIMP 2.10.20+ needs ≥ 2.56.2; MATE
@@ -149,8 +159,17 @@ gtk2-wayland/
 │   ├── build-shim.sh         # build & install xlib-wayland
 │   ├── build-gtk2.sh         # build stock GTK+ 2.24.33 against the shim
 │   ├── gtester               # gtester-compatible GTest driver (MIT)
-│   └── run-tests-labwc.sh    # gtester inside nested labwc
-└── docs/                     # findings and gap reports (as they accumulate)
+│   ├── run-tests-labwc.sh    # gtester inside nested labwc
+│   └── test-ime.sh           # GTK2 im-xim end-to-end under the headless compositor
+└── docs/                     # findings, status and gap reports
+    ├── STATUS.md             # consolidated status + gap list
+    ├── GTK2-GAP-ANALYSIS.md  # the authoritative X11 requirement inventory
+    ├── TEST-RESULTS.md       # gtester results
+    ├── RENDER-STATUS.md      # Render path
+    ├── INPUT-STATUS.md       # pointer/popup/EWMH input
+    ├── GTK-DEMO-STATUS.md    # gtk-demo render-vs-fallback
+    ├── MATE-STATUS.md
+    └── GIMP-STATUS.md
 ```
 
 ## License

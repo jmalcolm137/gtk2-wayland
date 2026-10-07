@@ -45,9 +45,12 @@ revision ([`versions.lock`](../versions.lock)).
 * A GTK2 *Wayland backend*. We deliberately keep the X11 backend and put the
   Wayland translation underneath GDK, where the shim already lives.
 * Porting GTK2 to GTK3 or to `gtk-backend-wayland`.
-* Fixing the inherent limits of an **in-process** Xlib (§2.3): cross-process X
-  IPC (XSMP, inter-client DnD, selection watching of *other* processes) is not
-  available on the shim.
+* Fixing the inherent limits of an **in-process** Xlib (§2.3) without a bridge:
+  cross-process X IPC (XSMP, inter-client DnD, selection watching of *other*
+  processes) is not directly available. The shim bridges the parts that matter —
+  X selections and session-manager properties cross processes through a
+  filesystem/socket broker (`broker.c`, `smprops.c`), and Motif DnD is bridged
+  onto the Wayland data device. GTK2's own XDND drag-and-drop is still open.
 * Xwayland in the test session. labwc's XWayland is disabled.
 
 ---
@@ -102,13 +105,18 @@ property store and window tree. There is no shared server. For GTK2 this is
 mostly invisible — a GTK2 application is a single client that owns its own
 widgets and input — but it matters for:
 
-* **X selections / clipboard** — in-process only, except as bridged to
-  `wl_data_device` for text (the shim already does this).
-* **XSettings** — GDK reads settings from a `_XSETTINGS_S*` selection owned by a
-  settings daemon. There is no daemon; the shim surfaces defaults.
-* **Inter-client DnD** — GDK's XDND targets another process's X window; across
-  shim processes this is not visible. Treated as a later milestone.
-* **`XSendEvent` to another process** — not possible cross-process.
+* **X selections / clipboard** — in-process, but bridged to `wl_data_device`
+  for text and, across shim processes, through the shim's selection broker
+  (`XLIB_WAYLAND_SHARE_SELECTIONS`). Only text MIME types are carried today.
+* **XSettings** — GDK reads settings from a `_XSETTINGS_S*` selection owner.
+  There is no settings daemon on the shim; GDK falls back to gtkrc/defaults, so
+  theme/font/icon settings are not shared uniformly and cannot change live.
+  Supplying the manager from the shim is the open work.
+* **Inter-client DnD** — GDK's XDND targets another process's X window, which
+  an in-process shim cannot see. Motif DnD is bridged onto the Wayland data
+  device; GTK2/XDND is not yet.
+* **`XSendEvent` to another process** — not possible cross-process; the broker
+  is the substitute for selections and shared properties.
 
 These limits are inherited, not new; the design treats them as explicit
 non-goals for the first milestones.
@@ -311,8 +319,8 @@ time, each a GTK2 client under nested labwc.
 | Render is large and subtle | GTK2 draws nothing | make it M2's sole focus; drive it with cairo-xlib conformance before GTK2 |
 | Extension libraries bind to the *system* libX11 | two Xlibs, wrong one wins | force the shim first (`LD_LIBRARY_PATH`/rpath); verify with `ldd` and `LD_DEBUG=libs` |
 | GLib no longer ships `gtester` | test suite cannot run as upstream intends | ship an MIT `gtester` compatible driver; use a real one if present |
-| GTK2 requires XSettings daemon | theme/font settings wrong | shim surfaces defaults; settings can be seeded via properties/resources |
-| In-process Xlib breaks cross-process features | DnD/XSMP/session gaps | documented non-goal for early milestones; Wayland bridges later |
+| GTK2 requires XSettings daemon | theme/font settings wrong | the shim owns the `_XSETTINGS_S*` manager and publishes settings itself (no daemon needed per process) |
+| In-process Xlib breaks cross-process features | DnD/XSMP/session gaps | selections and `_DT_SM_*` properties are bridged by the shim's `broker.c`/`smprops.c`; Motif DnD is bridged; GTK2 XDND remains |
 | `--with-xinput` pulls in XI2 device classes | build/run breakage | start with XInput disabled; enable once XI2 is functional |
 | labwc package depends on exact wlroots minor | nested session won't start | pin and verify; fall back to a source build of labwc |
 | Scope is enormous | never "done" | milestone-gated; GTK2 test suite before whole applications |

@@ -278,11 +278,17 @@ changes they produced:
 | keyval search aborts: `assertion failed (XkbKeySymEntry …)` | per-key arrays sized to the keymap max, but clients iterate to `XDisplayKeycodes()` max | size key arrays to the full 0..255 range |
 | `pangoxft` link: undefined `XftGlyphExtents`, `XftDefaultHasRender`, `XftGlyphSpecRender`, `XftDrawGlyphSpec` | Xft subset | draw-level entry points implemented; Render-level ones are no-ops. GTK2 does not use pangoxft (it draws via pangocairo/Render), so this is inert. See `docs/RENDER-STATUS.md` |
 | `liststore` segfault in GLib `GSequence` | GTK2 2.24 built against GLib 2.88 | build the pinned MATE 1.10-era stack (GLib 2.48.2, ATK 2.18.0, Pango 1.38.1, gdk-pixbuf 2.34.0) |
+| `expander`/`testing` synthetic clicks did not reach widgets | `XWarpPointer` produced no crossing/motion, and the XKB key type had no modifier→level map | `XWarpPointer` now drives the motion path; `XkbGetMap` builds one- and two-level types so Shift selects level 1 |
+| `keys-events` saw no focus right after `gtk_widget_grab_focus()` | focus waited for the compositor's `wl_keyboard.enter`; a stale leave deactivated the wrong window | FocusIn is emitted with the map; `wl_keyboard.leave` is matched to the surface that lost focus |
+| gtk-demo frames differed from the core fallback | several Render-path bugs (stale clip on `CPClipMask=None`, alpha dropped by `XPutImage`, interleaved gradient stops, compound glyph ids) | fixed in the shim; all static demos now match — see [GTK-DEMO-STATUS.md](GTK-DEMO-STATUS.md) |
+| Input methods could not compose | the shim's XIM was a local stub | XIM is a real bridge to `zwp_text_input_v3`; the shim's `docs/IME-STATUS.md` |
+| Dead keys produced no composed character | `XLookupString` ignored compose state | keymap uses xkbcommon-compose |
+| A selection owned by another shim process was invisible | each process is its own X server | `broker.c` shares X selections and `smprops.c` shares `_DT_SM_*` properties |
 
-Remaining (documented in `gtk2-wayland/docs/TEST-RESULTS.md`): GDK's synthetic
-`XSendEvent` test helpers are not dispatched to widgets; `testing`'s
-X-server-round-trip timing assertion does not apply to an in-process shim;
-`defaultvalue`'s `GdkPixbuf.rowstride` expectation is non-shim.
+The earlier "remaining" items in this list (`XSendEvent` test helpers,
+`testing`'s X-server timing, `defaultvalue`) are now passing; see
+[TEST-RESULTS.md](TEST-RESULTS.md). The open gaps are tracked in
+[STATUS.md](STATUS.md).
 
 ## 8. First findings during the GTK2 configure
 
