@@ -65,7 +65,6 @@ export CXXFLAGS="${GTK2_CFLAGS} ${CXXFLAGS:-}"
   --enable-cups
   --disable-papi
   --disable-introspection
-  --disable-xinerama
   --with-xinput=no
   --disable-dependency-tracking
 }"
