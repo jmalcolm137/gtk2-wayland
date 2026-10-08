@@ -53,7 +53,7 @@ Ordered by user-visible impact.
 | 5 | **Accessibility** | **Done** (ATK/AT-SPI over D-Bus): `scripts/build-a11y.sh` builds an era-matched at-spi2 against the GTK2 stack (the host's needs glib ≥ 2.78) and installs the GTK2 bridge module; `scripts/test-a11y.sh` verifies an AT-SPI client finds a widget. Input synthesis is the compositor's (Wayland). See [A11Y-STATUS.md](A11Y-STATUS.md). |
 | 6 | **Printing** | **Done**: GTK2 is built with CUPS (`--enable-cups`), so `GtkPrint` works and the `file` (PDF/PS), `lpr` and `cups` backends are all present. Printing is CUPS/IPP over a socket, not a display-server protocol — there is no Wayland integration to do (the modern `xdg-desktop-portal` Print portal is GTK3/4). `scripts/test-print.sh` exports a PDF and checks the CUPS backend. |
 | 7 | **Session management (XSMP)** | The **X11 session protocol** is now relayed across processes (`WM_SAVE_YOURSELF`/`WM_DELETE_WINDOW` via `mw-session`), and the CDE `_DT_SM_*` properties are shared. XSMP itself is an ICE/libSM protocol outside libX11; `SESSION_MANAGER`/libSM are the app/session-manager's side. |
-| 8 | **Minor** | XIM `delete_surrounding_text` ignored; Xft Render-level entry points are no-ops (inert — GTK2 uses pangocairo). |
+| 8 | **Minor** | **Done**: XIM `delete_surrounding_text` is realised as Backspace/Delete key events to the focused widget (XIM has no such request); the Xft Render-level entry points (`XftGlyphSpecRender`/`CharSpecRender`/…FontSpecRender) now draw through the destination Picture instead of being no-ops (verified by the shim's `tests/xftrender_x.c`). |
 
 **XSettings caveats.** The shim publishes a *config file*, so a session has to
 provide it (and a MATE-settings bridge would generate one, or relay the daemon's
