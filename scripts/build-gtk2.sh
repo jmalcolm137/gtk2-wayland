@@ -62,7 +62,7 @@ export CXXFLAGS="${GTK2_CFLAGS} ${CXXFLAGS:-}"
   --prefix=$GTK2_PREFIX
   --with-gdktarget=x11
   --disable-gtk-doc
-  --disable-cups
+  --enable-cups
   --disable-papi
   --disable-introspection
   --disable-xinerama
