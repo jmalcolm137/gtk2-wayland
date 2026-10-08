@@ -30,6 +30,7 @@ go into detail; this page says where we are and what is left.
 | Transparency / RGBA windows | ✅ | shim stands in as the X compositor (`_NET_WM_CM_S0`) with a depth-32 ARGB visual and alpha-preserving presentation — shim's `docs/COMPOSITE-STATUS.md` |
 | XInput2 touch | ✅ | shim reports devices/classes from the Wayland seat and bridges touch to `XI_TouchBegin/Update/End` (GTK2 itself uses core input) — shim's `docs/XI2-STATUS.md` |
 | Session management | ✅ | X11 session protocol (`WM_SAVE_YOURSELF`/`WM_DELETE_WINDOW`) relayed across processes + CDE `_DT_SM_*` sharing; XSMP itself is ICE/libSM — shim's `docs/SESSION-STATUS.md` |
+| Accessibility (ATK/AT-SPI) | ✅ | GAIL + an era-matched at-spi2 bridge; the tree is published over D-Bus and found by an AT-SPI client — [A11Y-STATUS.md](A11Y-STATUS.md). Input synthesis is Wayland's. |
 | MATE 1.10 | 🚧 29 components | build and run unmodified — [MATE-STATUS.md](MATE-STATUS.md) |
 | GIMP 2.10 | ✅ | builds, runs, renders with no XWayland — [GIMP-STATUS.md](GIMP-STATUS.md) |
 
@@ -48,7 +49,7 @@ Ordered by user-visible impact.
 | 2 | **Non-text clipboard / PRIMARY** | Mostly done: the shim carries the full MIME list, answers `TARGETS`, serves `image/png`/`text/uri-list` both ways, and bridges `PRIMARY` (select-to-paste) via primary-selection v1 (`xlib-wayland/docs/CLIPBOARD-STATUS.md`). Remaining: `SECONDARY`, format-32 targets. |
 | 3 | **XEmbed** | Cross-process embedding is impossible under Wayland (no cross-client surface embedding) and GTK2's `GtkPlug` refuses same-process embedding, so `GtkPlug`/`GtkSocket` are a **documented non-goal**. The shim's primitives (`XReparentWindow` + `ReparentNotify`, `_XEMBED` delivery, `_XEMBED_INFO`) work for same-process embedders — shim's `docs/XEMBED-STATUS.md`. |
 | 4 | **Optional extensions** | **Xfixes, Xcursor, SHAPE, MIT-SHM, Sync, XDamage, XComposite, and XInput2 device classes + touch** are provided (shim facades), so clipboard owner-change tracking, themed cursors, shaped windows, shared-memory images, frame-sync counters, RGBA/transparent composited windows and Wayland touch work. Still absent: Xinerama, and XInput2 pointer/keyboard events + tablet classes. GDK degrades (and GTK2 uses core input). We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
-| 5 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
+| 5 | **Accessibility** | **Done** (ATK/AT-SPI over D-Bus): `scripts/build-a11y.sh` builds an era-matched at-spi2 against the GTK2 stack (the host's needs glib ≥ 2.78) and installs the GTK2 bridge module; `scripts/test-a11y.sh` verifies an AT-SPI client finds a widget. Input synthesis is the compositor's (Wayland). See [A11Y-STATUS.md](A11Y-STATUS.md). |
 | 6 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
 | 7 | **Session management (XSMP)** | The **X11 session protocol** is now relayed across processes (`WM_SAVE_YOURSELF`/`WM_DELETE_WINDOW` via `mw-session`), and the CDE `_DT_SM_*` properties are shared. XSMP itself is an ICE/libSM protocol outside libX11; `SESSION_MANAGER`/libSM are the app/session-manager's side. |
 | 8 | **Minor** | XIM `delete_surrounding_text` ignored; Xft Render-level entry points are no-ops (inert — GTK2 uses pangocairo). |

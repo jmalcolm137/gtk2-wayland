@@ -105,3 +105,7 @@ LIBSFDO_VERSION=0.1.4
 # and gtester-report; on hosts where GLib has removed them (after 2.60),
 # stage_glib_tools stages the distro's glib2-devel package to obtain them.
 GTESTER=prefix-or-glib2-devel
+
+# Accessibility stack (the host at-spi2 needs glib >= 2.78; build these against the GTK2 stack).
+AT_SPI2_CORE_VERSION=2.26.2
+AT_SPI2_ATK_VERSION=2.22.0
