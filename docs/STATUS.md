@@ -28,6 +28,7 @@ go into detail; this page says where we are and what is left.
 | XFIXES / Xcursor | ✅ | shim `libXfixes`/`libXcursor` facades: GDK clipboard owner-change tracking and themed/image cursors — shim's `docs/XFIXES-STATUS.md` |
 | SHAPE / MIT-SHM / Sync | ✅ | shim `libXext` facade (with faithful `extutil` for libXi/libXtst): shaped windows, shared-memory images, frame-sync counters — shim's `docs/XEXT-STATUS.md` |
 | Transparency / RGBA windows | ✅ | shim stands in as the X compositor (`_NET_WM_CM_S0`) with a depth-32 ARGB visual and alpha-preserving presentation — shim's `docs/COMPOSITE-STATUS.md` |
+| XInput2 touch | ✅ | shim reports devices/classes from the Wayland seat and bridges touch to `XI_TouchBegin/Update/End` (GTK2 itself uses core input) — shim's `docs/XI2-STATUS.md` |
 | MATE 1.10 | 🚧 29 components | build and run unmodified — [MATE-STATUS.md](MATE-STATUS.md) |
 | GIMP 2.10 | ✅ | builds, runs, renders with no XWayland — [GIMP-STATUS.md](GIMP-STATUS.md) |
 
@@ -45,7 +46,7 @@ Ordered by user-visible impact.
 | 1 | **XDND (GDK drag-and-drop)** | GDK's X11 DnD is XDND; it needs a source+destination bridge onto `wl_data_device` (the Motif bridge + broker are the model). **In progress separately — not touched here.** |
 | 2 | **Non-text clipboard / PRIMARY** | Mostly done: the shim carries the full MIME list, answers `TARGETS`, serves `image/png`/`text/uri-list` both ways, and bridges `PRIMARY` (select-to-paste) via primary-selection v1 (`xlib-wayland/docs/CLIPBOARD-STATUS.md`). Remaining: `SECONDARY`, format-32 targets. |
 | 3 | **XEmbed** | `GtkPlug`/`GtkSocket` cross-process embedding (reparent + XFixes + `XSendEvent`) is not bridged. |
-| 4 | **Optional extensions** | **Xfixes, Xcursor, SHAPE, MIT-SHM, Sync, XDamage and XComposite are provided** (shim facades), so clipboard owner-change tracking, themed cursors, shaped windows, shared-memory images, frame-sync counters and RGBA/transparent composited windows work. Still absent: Xinerama and XInput2 (tablets/touch/hotplug); GDK degrades. We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
+| 4 | **Optional extensions** | **Xfixes, Xcursor, SHAPE, MIT-SHM, Sync, XDamage, XComposite, and XInput2 device classes + touch** are provided (shim facades), so clipboard owner-change tracking, themed cursors, shaped windows, shared-memory images, frame-sync counters, RGBA/transparent composited windows and Wayland touch work. Still absent: Xinerama, and XInput2 pointer/keyboard events + tablet classes. GDK degrades (and GTK2 uses core input). We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
 | 5 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
 | 6 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
 | 7 | **Session management (XSMP)** | Partial `_DT_SM_*` property sharing only; cross-process save/restore/logout coordination is incomplete. |
