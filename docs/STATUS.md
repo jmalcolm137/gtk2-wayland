@@ -46,7 +46,7 @@ Ordered by user-visible impact.
 |---|---|---|
 | 1 | **XDND (GDK drag-and-drop)** | GDK's X11 DnD is XDND; it needs a source+destination bridge onto `wl_data_device` (the Motif bridge + broker are the model). **In progress separately — not touched here.** |
 | 2 | **Non-text clipboard / PRIMARY** | Mostly done: the shim carries the full MIME list, answers `TARGETS`, serves `image/png`/`text/uri-list` both ways, and bridges `PRIMARY` (select-to-paste) via primary-selection v1 (`xlib-wayland/docs/CLIPBOARD-STATUS.md`). Remaining: `SECONDARY`, format-32 targets. |
-| 3 | **XEmbed** | `GtkPlug`/`GtkSocket` cross-process embedding (reparent + XFixes + `XSendEvent`) is not bridged. |
+| 3 | **XEmbed** | Cross-process embedding is impossible under Wayland (no cross-client surface embedding) and GTK2's `GtkPlug` refuses same-process embedding, so `GtkPlug`/`GtkSocket` are a **documented non-goal**. The shim's primitives (`XReparentWindow` + `ReparentNotify`, `_XEMBED` delivery, `_XEMBED_INFO`) work for same-process embedders — shim's `docs/XEMBED-STATUS.md`. |
 | 4 | **Optional extensions** | **Xfixes, Xcursor, SHAPE, MIT-SHM, Sync, XDamage, XComposite, and XInput2 device classes + touch** are provided (shim facades), so clipboard owner-change tracking, themed cursors, shaped windows, shared-memory images, frame-sync counters, RGBA/transparent composited windows and Wayland touch work. Still absent: Xinerama, and XInput2 pointer/keyboard events + tablet classes. GDK degrades (and GTK2 uses core input). We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
 | 5 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
 | 6 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
