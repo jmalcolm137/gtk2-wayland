@@ -29,6 +29,7 @@ go into detail; this page says where we are and what is left.
 | SHAPE / MIT-SHM / Sync | ✅ | shim `libXext` facade (with faithful `extutil` for libXi/libXtst): shaped windows, shared-memory images, frame-sync counters — shim's `docs/XEXT-STATUS.md` |
 | Transparency / RGBA windows | ✅ | shim stands in as the X compositor (`_NET_WM_CM_S0`) with a depth-32 ARGB visual and alpha-preserving presentation — shim's `docs/COMPOSITE-STATUS.md` |
 | XInput2 touch | ✅ | shim reports devices/classes from the Wayland seat and bridges touch to `XI_TouchBegin/Update/End` (GTK2 itself uses core input) — shim's `docs/XI2-STATUS.md` |
+| Session management | ✅ | X11 session protocol (`WM_SAVE_YOURSELF`/`WM_DELETE_WINDOW`) relayed across processes + CDE `_DT_SM_*` sharing; XSMP itself is ICE/libSM — shim's `docs/SESSION-STATUS.md` |
 | MATE 1.10 | 🚧 29 components | build and run unmodified — [MATE-STATUS.md](MATE-STATUS.md) |
 | GIMP 2.10 | ✅ | builds, runs, renders with no XWayland — [GIMP-STATUS.md](GIMP-STATUS.md) |
 
@@ -49,7 +50,7 @@ Ordered by user-visible impact.
 | 4 | **Optional extensions** | **Xfixes, Xcursor, SHAPE, MIT-SHM, Sync, XDamage, XComposite, and XInput2 device classes + touch** are provided (shim facades), so clipboard owner-change tracking, themed cursors, shaped windows, shared-memory images, frame-sync counters, RGBA/transparent composited windows and Wayland touch work. Still absent: Xinerama, and XInput2 pointer/keyboard events + tablet classes. GDK degrades (and GTK2 uses core input). We build `--with-xinput=no` and `--disable-xinerama`. Multi-monitor via RandR is single-output. |
 | 5 | **Accessibility** | GTK2's ATK/AT-SPI bridge (DBus) is not addressed. |
 | 6 | **Printing** | Built `--disable-cups`; `GtkPrint` is unavailable. |
-| 7 | **Session management (XSMP)** | Partial `_DT_SM_*` property sharing only; cross-process save/restore/logout coordination is incomplete. |
+| 7 | **Session management (XSMP)** | The **X11 session protocol** is now relayed across processes (`WM_SAVE_YOURSELF`/`WM_DELETE_WINDOW` via `mw-session`), and the CDE `_DT_SM_*` properties are shared. XSMP itself is an ICE/libSM protocol outside libX11; `SESSION_MANAGER`/libSM are the app/session-manager's side. |
 | 8 | **Minor** | XIM `delete_surrounding_text` ignored; Xft Render-level entry points are no-ops (inert — GTK2 uses pangocairo). |
 
 **XSettings caveats.** The shim publishes a *config file*, so a session has to
